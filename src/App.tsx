@@ -239,7 +239,7 @@ function App() {
   const quizQuestion = QUESTIONS.find((q) => q.id === quizQuestionId) ?? null
   const quizOptions = useMemo(() => {
     if (!quizQuestion) return { options: [] as string[], correct: '' }
-    return buildMultipleChoiceOptions(quizQuestion, QUESTIONS, 4)
+    return buildMultipleChoiceOptions(quizQuestion, QUESTIONS, 5)
   }, [quizQuestion])
 
   const nextQuizQuestion = useCallback(() => {

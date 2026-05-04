@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
+import { QUESTIONS as ALL_QUESTIONS } from '../data/questions'
 import type { CivicsQuestion } from '../data/questions'
+import { QUESTION_DISTRACTORS, getQuestionDistractors } from '../data/quiz-distractors'
 import {
   buildMultipleChoiceOptions,
   getDynamicAnswers,
@@ -23,10 +25,34 @@ describe('quiz helpers', () => {
   })
 
   it('builds options including the correct answer', () => {
-    const result = buildMultipleChoiceOptions(QUESTIONS[0], QUESTIONS, 4)
-    expect(result.options.length).toBe(4)
+    const result = buildMultipleChoiceOptions(QUESTIONS[0], QUESTIONS, 5)
+    expect(result.options.length).toBe(5)
     expect(result.options).toContain(result.correct)
     expect(result.correct).toBe('A1')
+  })
+
+  it('returns dedicated distractors from separate bank', () => {
+    const distractors = getQuestionDistractors({
+      id: 7,
+      category: 'American Government',
+      question: 'How many amendments does the Constitution have?',
+      answers: ['Twenty-seven (27)'],
+    })
+
+    expect(distractors.length).toBeGreaterThan(0)
+    expect(distractors).not.toContain('Twenty-seven (27)')
+  })
+
+  it('covers all civics questions with linked distractor entries', () => {
+    for (const question of ALL_QUESTIONS) {
+      const distractors = QUESTION_DISTRACTORS[question.id] ?? []
+      expect(distractors.length).toBeGreaterThanOrEqual(6)
+      expect(distractors.length).toBeLessThanOrEqual(8)
+
+      for (const accepted of question.answers) {
+        expect(distractors).not.toContain(accepted)
+      }
+    }
   })
 
   it('uses dynamic answers for state/profile questions', () => {

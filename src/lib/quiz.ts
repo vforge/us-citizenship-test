@@ -1,3 +1,4 @@
+import { getQuestionDistractors } from '../data/quiz-distractors'
 import type { CivicsQuestion } from '../data/questions'
 
 export type UserProfile = {
@@ -32,15 +33,19 @@ export function pickUniqueQuestionIds(ids: number[], count: number) {
 export function buildMultipleChoiceOptions(
   question: CivicsQuestion,
   allQuestions: CivicsQuestion[],
-  optionCount = 4,
+  optionCount = 5,
 ) {
   const correct = question.answers[0]
-  const distractors = allQuestions
+
+  const dedicatedDistractors = getQuestionDistractors(question)
+
+  const fallbackDistractors = allQuestions
     .filter((q) => q.id !== question.id)
     .map((q) => q.answers[0])
     .filter((answer): answer is string => Boolean(answer) && answer !== correct)
 
-  const uniqueDistractors = [...new Set(distractors)]
+  const uniqueDistractors = [...new Set([...dedicatedDistractors, ...fallbackDistractors])]
+    .filter((candidate) => !question.answers.includes(candidate))
     .sort(() => Math.random() - 0.5)
     .slice(0, Math.max(0, optionCount - 1))
 

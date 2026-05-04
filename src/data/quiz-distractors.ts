@@ -1,0 +1,125 @@
+import { QUESTIONS } from './questions'
+import type { CivicsQuestion } from './questions'
+
+const DISTRACTORS_BY_QUESTION_ID: Record<number, string[]> = {
+  1: ['The Bill of Rights', 'The Declaration of Independence', 'The Articles of Confederation', 'Local mayor', 'State legislature only', 'Federal Reserve Board', 'County courts only', 'Executive order'],
+  2: ['Sets tax rates for each state', 'Creates state governments only', 'Chooses Supreme Court justices directly', 'Local mayor', 'State legislature only', 'Federal Reserve Board', 'County courts only', 'Executive order'],
+  3: ['Life, Liberty, and Happiness', 'In God We Trust', 'Four score and seven years ago', 'Local mayor', 'State legislature only', 'Federal Reserve Board', 'County courts only', 'Executive order'],
+  4: ['A federal court ruling', 'A presidential order', 'A new tax law', 'Local mayor', 'State legislature only', 'Federal Reserve Board', 'County courts only', 'Executive order'],
+  5: ['The Federalist Papers', 'The Emancipation Proclamation', 'The Preamble', 'Local mayor', 'State legislature only', 'Federal Reserve Board', 'County courts only', 'Executive order'],
+  6: ['Trial by jury only', 'Owning property', 'Voting in every election', 'Local mayor', 'State legislature only', 'Federal Reserve Board', 'County courts only', 'Executive order'],
+  7: ['Ten (10)', 'Thirty-one (31)', 'One hundred (100)', 'Local mayor', 'State legislature only', 'Federal Reserve Board', 'County courts only', 'Executive order'],
+  8: ['Created the Constitution', 'Ended the Civil War', 'Started the U.S. Congress', 'Local mayor', 'State legislature only', 'Federal Reserve Board', 'County courts only', 'Executive order'],
+  9: ['Voting and jury duty', 'Property and taxes', 'Travel and work permits', 'Local mayor', 'State legislature only', 'Federal Reserve Board', 'County courts only', 'Executive order'],
+  10: ['You must choose one religion', 'Only citizens can have religion', 'Government picks official churches', 'Local mayor', 'State legislature only', 'Federal Reserve Board', 'County courts only', 'Executive order'],
+  11: ['Command economy', 'Feudal economy', 'Barter economy', 'Local mayor', 'State legislature only', 'Federal Reserve Board', 'County courts only', 'Executive order'],
+  12: ['Only leaders must follow laws', 'Courts are above the law', 'Congress controls all laws alone', 'Local mayor', 'State legislature only', 'Federal Reserve Board', 'County courts only', 'Executive order'],
+  13: ['County sheriff office', 'State school board', 'Federal reserve bank', 'Local mayor', 'State legislature only', 'Federal Reserve Board', 'County courts only', 'Executive order'],
+  14: ['Military command', 'State elections only', 'Presidential decrees', 'Local mayor', 'State legislature only', 'Federal Reserve Board', 'County courts only', 'Executive order'],
+  15: ['The Vice President', 'Congress', 'The Supreme Court', 'Local mayor', 'State legislature only', 'Federal Reserve Board', 'County courts only', 'Executive order'],
+  16: ['The President alone', 'The Supreme Court', 'State legislatures only', 'Local mayor', 'State legislature only', 'Federal Reserve Board', 'County courts only', 'Executive order'],
+  17: ['Executive and Judicial', 'Federal and State', 'Cabinet and Courts', 'Local mayor', 'State legislature only', 'Federal Reserve Board', 'County courts only', 'Executive order'],
+  18: ['Fifty (50)', 'Two hundred (200)', 'Four hundred (400)', 'Local mayor', 'State legislature only', 'Federal Reserve Board', 'County courts only', 'Executive order'],
+  19: ['Two (2)', 'Four (4)', 'Eight (8)', 'Local mayor', 'State legislature only', 'Federal Reserve Board', 'County courts only', 'Executive order'],
+  20: ['Your mayor', 'Your county judge', 'Your local police chief', 'Local mayor', 'State legislature only', 'Federal Reserve Board', 'County courts only', 'Executive order'],
+  21: ['One hundred (100)', 'Three hundred (300)', 'Five hundred (500)', 'Local mayor', 'State legislature only', 'Federal Reserve Board', 'County courts only', 'Executive order'],
+  22: ['Four (4)', 'Six (6)', 'Eight (8)', 'Local mayor', 'State legislature only', 'Federal Reserve Board', 'County courts only', 'Executive order'],
+  23: ['Your U.S. Senator', 'Your state governor', 'Your mayor', 'Local mayor', 'State legislature only', 'Federal Reserve Board', 'County courts only', 'Executive order'],
+  24: ['Only registered voters', 'Only taxpayers', 'Only their political party', 'Local mayor', 'State legislature only', 'Federal Reserve Board', 'County courts only', 'Executive order'],
+  25: ['Because of state land size', 'Because of state age', 'Because of governor decisions', 'Local mayor', 'State legislature only', 'Federal Reserve Board', 'County courts only', 'Executive order'],
+  26: ['Two (2)', 'Six (6)', 'Eight (8)', 'Local mayor', 'State legislature only', 'Federal Reserve Board', 'County courts only', 'Executive order'],
+  27: ['January', 'March', 'July', 'Local mayor', 'State legislature only', 'Federal Reserve Board', 'County courts only', 'Executive order'],
+  28: ['Varies by state', 'The Chief Justice', 'The Speaker of your state house', 'Local mayor', 'State legislature only', 'Federal Reserve Board', 'County courts only', 'Executive order'],
+  29: ['The Secretary of State', 'The Senate leader', 'Your governor', 'Local mayor', 'State legislature only', 'Federal Reserve Board', 'County courts only', 'Executive order'],
+  30: ['The Speaker of the House', 'The Chief Justice', 'The Senate President pro tempore', 'Local mayor', 'State legislature only', 'Federal Reserve Board', 'County courts only', 'Executive order'],
+  31: ['The Chief Justice', 'The Secretary of Defense', 'The Senate majority leader', 'Local mayor', 'State legislature only', 'Federal Reserve Board', 'County courts only', 'Executive order'],
+  32: ['The Secretary of Defense', 'The Joint Chiefs only', 'Congress', 'Local mayor', 'State legislature only', 'Federal Reserve Board', 'County courts only', 'Executive order'],
+  33: ['The Supreme Court', 'The Vice President', 'The Senate', 'Local mayor', 'State legislature only', 'Federal Reserve Board', 'County courts only', 'Executive order'],
+  34: ['Congress', 'The Supreme Court', 'The Vice President', 'Local mayor', 'State legislature only', 'Federal Reserve Board', 'County courts only', 'Executive order'],
+  35: ['Writes Supreme Court opinions', 'Runs state elections', 'Appoints governors', 'Local mayor', 'State legislature only', 'Federal Reserve Board', 'County courts only', 'Executive order'],
+  36: ['Speaker of the House', 'Majority Leader', 'Chief of Staff of Congress', 'Local mayor', 'State legislature only', 'Federal Reserve Board', 'County courts only', 'Executive order'],
+  37: ['Runs elections', 'Collects taxes', 'Commands the military', 'Local mayor', 'State legislature only', 'Federal Reserve Board', 'County courts only', 'Executive order'],
+  38: ['Federal District Court', 'Court of Appeals', 'Congressional Court', 'Local mayor', 'State legislature only', 'Federal Reserve Board', 'County courts only', 'Executive order'],
+  39: ['Seven (7)', 'Eleven (11)', 'Thirteen (13)', 'Local mayor', 'State legislature only', 'Federal Reserve Board', 'County courts only', 'Executive order'],
+  40: ['Varies by state', 'The President', 'The Attorney General', 'Local mayor', 'State legislature only', 'Federal Reserve Board', 'County courts only', 'Executive order'],
+  41: ['Issue driver licenses', 'Run local schools', 'Approve city zoning', 'Local mayor', 'State legislature only', 'Federal Reserve Board', 'County courts only', 'Executive order'],
+  42: ['Declare war', 'Print money', 'Make treaties', 'Local mayor', 'State legislature only', 'Federal Reserve Board', 'County courts only', 'Executive order'],
+  43: ['The President', 'Your U.S. Representative', 'The Secretary of State', 'Local mayor', 'State legislature only', 'Federal Reserve Board', 'County courts only', 'Executive order'],
+  44: ['Washington, D.C.', 'New York City', 'Varies by country', 'Local mayor', 'State legislature only', 'Federal Reserve Board', 'County courts only', 'Executive order'],
+  45: ['Federalist and Whig', 'Green and Libertarian', 'Independent and Progressive', 'Local mayor', 'State legislature only', 'Federal Reserve Board', 'County courts only', 'Executive order'],
+  46: ['Varies by state', 'Supreme Court party', 'No party affiliation required', 'Local mayor', 'State legislature only', 'Federal Reserve Board', 'County courts only', 'Executive order'],
+  47: ['The Chief Justice', 'The Vice President', 'The Senate Majority Leader', 'Local mayor', 'State legislature only', 'Federal Reserve Board', 'County courts only', 'Executive order'],
+  48: ['Only property owners can vote', 'Only men over 25 can vote', 'Only state governors can vote', 'The Industrial Revolution', 'The Great Migration', 'The New Deal', 'The Space Race', 'The Reconstruction Era'],
+  49: ['Apply for a passport', 'Own property', 'Travel between states', 'The Industrial Revolution', 'The Great Migration', 'The New Deal', 'The Space Race', 'The Reconstruction Era'],
+  50: ['Own a business', 'Get public education', 'Work in the U.S.', 'The Industrial Revolution', 'The Great Migration', 'The New Deal', 'The Space Race', 'The Reconstruction Era'],
+  51: ['Vote in federal elections', 'Run for President', 'Serve as a U.S. Senator', 'The Industrial Revolution', 'The Great Migration', 'The New Deal', 'The Space Race', 'The Reconstruction Era'],
+  52: ['A political party', 'The President only', 'The Supreme Court', 'The Industrial Revolution', 'The Great Migration', 'The New Deal', 'The Space Race', 'The Reconstruction Era'],
+  53: ['Pay higher taxes forever', 'Join one political party', 'Move to Washington, D.C.', 'The Industrial Revolution', 'The Great Migration', 'The New Deal', 'The Space Race', 'The Reconstruction Era'],
+  54: ['Sixteen (16)', 'Twenty-one (21)', 'Twenty-five (25)', 'The Industrial Revolution', 'The Great Migration', 'The New Deal', 'The Space Race', 'The Reconstruction Era'],
+  55: ['Serve as a Supreme Court justice', 'Command the military', 'Issue federal visas', 'The Industrial Revolution', 'The Great Migration', 'The New Deal', 'The Space Race', 'The Reconstruction Era'],
+  56: ['January 1', 'June 30', 'December 31', 'The Industrial Revolution', 'The Great Migration', 'The New Deal', 'The Space Race', 'The Reconstruction Era'],
+  57: ['At age 16', 'At age 30', 'After age 35', 'The Industrial Revolution', 'The Great Migration', 'The New Deal', 'The Space Race', 'The Reconstruction Era'],
+  58: ['Mandatory military service', 'Government assignment', 'Required relocation', 'The Industrial Revolution', 'The Great Migration', 'The New Deal', 'The Space Race', 'The Reconstruction Era'],
+  59: ['European settlers', 'Spanish missionaries', 'French traders', 'The Industrial Revolution', 'The Great Migration', 'The New Deal', 'The Space Race', 'The Reconstruction Era'],
+  60: ['Europeans', 'Asians', 'South Americans', 'The Industrial Revolution', 'The Great Migration', 'The New Deal', 'The Space Race', 'The Reconstruction Era'],
+  61: ['Because of low taxes', 'Because they supported the king', 'Because Britain offered representation', 'The Industrial Revolution', 'The Great Migration', 'The New Deal', 'The Space Race', 'The Reconstruction Era'],
+  62: ['George Washington', 'Benjamin Franklin', 'James Madison', 'The Industrial Revolution', 'The Great Migration', 'The New Deal', 'The Space Race', 'The Reconstruction Era'],
+  63: ['July 4, 1787', 'September 17, 1787', 'December 15, 1791', 'The Industrial Revolution', 'The Great Migration', 'The New Deal', 'The Space Race', 'The Reconstruction Era'],
+  64: ['California, Texas, Florida', 'Ohio, Michigan, Illinois', 'Alaska, Hawaii, Arizona', 'The Industrial Revolution', 'The Great Migration', 'The New Deal', 'The Space Race', 'The Reconstruction Era'],
+  65: ['The Bill of Rights was repealed', 'The Civil War ended', 'The Senate was abolished', 'The Industrial Revolution', 'The Great Migration', 'The New Deal', 'The Space Race', 'The Reconstruction Era'],
+  66: ['1776', '1791', '1803', 'The Industrial Revolution', 'The Great Migration', 'The New Deal', 'The Space Race', 'The Reconstruction Era'],
+  67: ['Thomas Jefferson', 'George Washington', 'Benjamin Franklin', 'The Industrial Revolution', 'The Great Migration', 'The New Deal', 'The Space Race', 'The Reconstruction Era'],
+  68: ['Third U.S. President', 'Wrote the Constitution alone', 'Led the Civil War', 'The Industrial Revolution', 'The Great Migration', 'The New Deal', 'The Space Race', 'The Reconstruction Era'],
+  69: ['Thomas Jefferson', 'Abraham Lincoln', 'John Adams', 'The Industrial Revolution', 'The Great Migration', 'The New Deal', 'The Space Race', 'The Reconstruction Era'],
+  70: ['Thomas Jefferson', 'John Adams', 'James Monroe', 'The Industrial Revolution', 'The Great Migration', 'The New Deal', 'The Space Race', 'The Reconstruction Era'],
+  71: ['Florida Territory', 'Alaska', 'Oregon Country', 'The Industrial Revolution', 'The Great Migration', 'The New Deal', 'The Space Race', 'The Reconstruction Era'],
+  72: ['World War I', 'Korean War', 'Vietnam War', 'The Industrial Revolution', 'The Great Migration', 'The New Deal', 'The Space Race', 'The Reconstruction Era'],
+  73: ['Revolutionary War', 'War of 1812', 'Mexican-American War', 'The Industrial Revolution', 'The Great Migration', 'The New Deal', 'The Space Race', 'The Reconstruction Era'],
+  74: ['Ocean trade routes', 'Banking policy only', 'Railroad expansion only', 'The Industrial Revolution', 'The Great Migration', 'The New Deal', 'The Space Race', 'The Reconstruction Era'],
+  75: ['Wrote the Constitution', 'Was first President', 'Founded the Democratic Party', 'The Industrial Revolution', 'The Great Migration', 'The New Deal', 'The Space Race', 'The Reconstruction Era'],
+  76: ['Gave women the right to vote', 'Ended World War I', 'Created the Bill of Rights', 'The Industrial Revolution', 'The Great Migration', 'The New Deal', 'The Space Race', 'The Reconstruction Era'],
+  77: ['Served as first female senator', 'Wrote the national anthem', 'Led the women’s army corps', 'The Industrial Revolution', 'The Great Migration', 'The New Deal', 'The Space Race', 'The Reconstruction Era'],
+  78: ['Revolutionary War', 'War of 1812', 'Civil War', 'The Industrial Revolution', 'The Great Migration', 'The New Deal', 'The Space Race', 'The Reconstruction Era'],
+  79: ['Franklin Roosevelt', 'Dwight Eisenhower', 'John F. Kennedy', 'The Industrial Revolution', 'The Great Migration', 'The New Deal', 'The Space Race', 'The Reconstruction Era'],
+  80: ['Woodrow Wilson', 'Harry Truman', 'Theodore Roosevelt', 'The Industrial Revolution', 'The Great Migration', 'The New Deal', 'The Space Race', 'The Reconstruction Era'],
+  81: ['Canada, Mexico, and Britain', 'Russia, China, and France', 'Spain, Portugal, and Brazil', 'The Industrial Revolution', 'The Great Migration', 'The New Deal', 'The Space Race', 'The Reconstruction Era'],
+  82: ['World War I', 'Korean War', 'Vietnam War', 'The Industrial Revolution', 'The Great Migration', 'The New Deal', 'The Space Race', 'The Reconstruction Era'],
+  83: ['Monarchy', 'Anarchy', 'Mercantilism', 'The Industrial Revolution', 'The Great Migration', 'The New Deal', 'The Space Race', 'The Reconstruction Era'],
+  84: ['Labor movement', 'Temperance movement', 'Women’s suffrage movement', 'The Industrial Revolution', 'The Great Migration', 'The New Deal', 'The Space Race', 'The Reconstruction Era'],
+  85: ['Founded the U.S. Navy', 'Wrote the Constitution', 'Served as Chief Justice', 'The Industrial Revolution', 'The Great Migration', 'The New Deal', 'The Space Race', 'The Reconstruction Era'],
+  86: ['The stock market crashed', 'The Civil Rights Act passed', 'The U.S. joined WWI', 'The Industrial Revolution', 'The Great Migration', 'The New Deal', 'The Space Race', 'The Reconstruction Era'],
+  87: ['Roman', 'Viking', 'Norman', 'The Industrial Revolution', 'The Great Migration', 'The New Deal', 'The Space Race', 'The Reconstruction Era'],
+  88: ['Colorado River', 'Hudson River', 'Ohio River', 'Mediterranean Sea', 'Gulf of California', 'Toronto, Canada', 'Los Angeles, California', 'Indian Ocean'],
+  89: ['Atlantic Ocean', 'Indian Ocean', 'Arctic Ocean', 'Mediterranean Sea', 'Gulf of California', 'Toronto, Canada', 'Los Angeles, California', 'Nevada'],
+  90: ['Pacific Ocean', 'Indian Ocean', 'Arctic Ocean', 'Mediterranean Sea', 'Gulf of California', 'Toronto, Canada', 'Los Angeles, California', 'Nevada'],
+  91: ['Ontario', 'Alberta', 'Yucatan', 'Mediterranean Sea', 'Gulf of California', 'Toronto, Canada', 'Los Angeles, California', 'Indian Ocean'],
+  92: ['Texas', 'Florida', 'Arizona', 'Mediterranean Sea', 'Gulf of California', 'Toronto, Canada', 'Los Angeles, California', 'Indian Ocean'],
+  93: ['Washington', 'Maine', 'Michigan', 'Mediterranean Sea', 'Gulf of California', 'Toronto, Canada', 'Los Angeles, California', 'Indian Ocean'],
+  94: ['New York City', 'Philadelphia', 'Boston', 'Mediterranean Sea', 'Gulf of California', 'Toronto, Canada', 'Los Angeles, California', 'Indian Ocean'],
+  95: ['Washington, D.C.', 'San Francisco Bay', 'Boston Harbor', 'Mediterranean Sea', 'Gulf of California', 'Toronto, Canada', 'Los Angeles, California', 'Indian Ocean'],
+  96: ['Because there are 13 states today', 'Because each stripe is a branch', 'Because each stripe is a president', 'The Federal Banner', 'The Liberty March', 'The Unity Anthem', 'Because each stripe is a state', 'Because each star is a senator'],
+  97: ['Because there are 50 colonies', 'Because each star is a senator', 'Because there are 50 capitals', 'The Federal Banner', 'The Liberty March', 'The Unity Anthem', 'Because each stripe is a state', 'Because there are 13 branches'],
+  98: ['America the Beautiful', 'God Bless America', 'Yankee Doodle', 'The Federal Banner', 'The Liberty March', 'The Unity Anthem', 'Because each stripe is a state', 'Because each star is a senator'],
+  99: ['June 14', 'November 11', 'January 1', 'Election Day', 'Tax Day', 'Statehood Day', 'Constitution Day only', 'Founders Day'],
+  100: ['Election Day and Tax Day', 'Halloween and Valentine’s Day', 'Statehood Day and Arbor Day', 'Election Day', 'Tax Day', 'Statehood Day', 'Constitution Day only', 'Founders Day'],
+}
+
+function normalize(value: string) {
+  return value.trim().toLowerCase()
+}
+
+export const QUESTION_DISTRACTORS: Record<number, string[]> = Object.fromEntries(
+  QUESTIONS.map((question) => {
+    const accepted = new Set(question.answers.map(normalize))
+    const raw = DISTRACTORS_BY_QUESTION_ID[question.id] ?? []
+    const cleaned = [...new Set(raw)]
+      .filter((value) => !accepted.has(normalize(value)))
+      .slice(0, 8)
+
+    return [question.id, cleaned]
+  }),
+)
+
+export function getQuestionDistractors(question: CivicsQuestion): string[] {
+  return QUESTION_DISTRACTORS[question.id] ?? []
+}
