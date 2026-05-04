@@ -23,6 +23,7 @@ const STORAGE_KEY = 'us-citizenship-test.ratings.v2'
 const PROFILE_KEY = 'us-citizenship-test.profile.v1'
 const MISSED_KEY = 'us-citizenship-test.missed.v1'
 const GUIDE_OPEN_KEY = 'us-citizenship-test.guide-open.v1'
+const MODE_KEY = 'us-citizenship-test.mode.v1'
 const INTERVIEW_QUESTION_COUNT = 10
 const INTERVIEW_PASS_MARK = 6
 
@@ -98,6 +99,17 @@ function App() {
       if (rawGuideOpen !== null) {
         setIsGuideOpen(rawGuideOpen === 'true')
       }
+
+      const rawMode = localStorage.getItem(MODE_KEY)
+      if (
+        rawMode === 'practice' ||
+        rawMode === 'interview' ||
+        rawMode === 'quiz' ||
+        rawMode === 'drill' ||
+        rawMode === 'settings'
+      ) {
+        setMode(rawMode)
+      }
     } catch {
       // ignore invalid storage
     }
@@ -118,6 +130,10 @@ function App() {
   useEffect(() => {
     localStorage.setItem(GUIDE_OPEN_KEY, String(isGuideOpen))
   }, [isGuideOpen])
+
+  useEffect(() => {
+    localStorage.setItem(MODE_KEY, mode)
+  }, [mode])
 
   const filteredQuestions = useMemo(() => {
     if (filter === 'all') return QUESTIONS
