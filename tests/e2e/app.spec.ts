@@ -12,10 +12,10 @@ test('flashcards mode supports reveal/rate and guide toggle', async ({ page }) =
   await page.getByRole('button', { name: 'Show guide' }).click()
   await expect(page.getByRole('heading', { name: 'Flashcard practice' })).toBeVisible()
 
-  await page.getByRole('button', { name: 'Reveal answer (R)' }).click()
+  await page.getByRole('button', { name: /Reveal answer \(R\)|Reveal/ }).first().click()
   await expect(page.getByText('Accepted answer(s)')).toBeVisible()
 
-  await page.getByRole('button', { name: 'I knew this (1)' }).click()
+  await page.getByRole('button', { name: /I knew this \(1\)|Known/ }).first().click()
 
   const knownStat = page
     .locator('section[aria-label="practice stats"] div')

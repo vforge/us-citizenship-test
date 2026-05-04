@@ -36,6 +36,7 @@ function App() {
   const [filter, setFilter] = useState<Filter>('all')
   const [isGuideOpen, setIsGuideOpen] = useState(true)
   const [isAnswerVisible, setIsAnswerVisible] = useState(false)
+  const [announcement, setAnnouncement] = useState('')
   const [ratings, setRatings] = useState<Record<number, Confidence>>({})
   const [attemptCount, setAttemptCount] = useState(0)
   const [currentQuestionId, setCurrentQuestionId] = useState<number | null>(() =>
@@ -142,6 +143,7 @@ function App() {
   const knownCount = Object.values(ratings).filter((v) => v === 'known').length
   const reviewCount = Object.values(ratings).filter((v) => v === 'review').length
   const ratedCount = knownCount + reviewCount
+  const unseenCount = QUESTIONS.length - ratedCount
   const progress = Math.round((ratedCount / QUESTIONS.length) * 100)
 
   const categoryStats = useMemo(() => {
@@ -164,6 +166,29 @@ function App() {
     return [...byCategory.entries()]
   }, [ratings])
 
+  const weakCategories = useMemo(() => {
+    return [...categoryStats]
+      .map(([category, stats]) => ({
+        category,
+        knownRatio: stats.total === 0 ? 0 : stats.known / stats.total,
+        ...stats,
+      }))
+      .sort((a, b) => a.knownRatio - b.knownRatio)
+      .slice(0, 2)
+  }, [categoryStats])
+
+  const suggestedMode = useMemo(() => {
+    if (reviewCount >= 12) return 'Drill mode'
+    if (knownCount < 40) return 'Flashcards'
+    if (knownCount < 80) return 'Quiz mode'
+    return 'Mock interview'
+  }, [knownCount, reviewCount])
+
+  const announce = useCallback((message: string) => {
+    setAnnouncement('')
+    window.setTimeout(() => setAnnouncement(message), 20)
+  }, [])
+
   const goToNext = useCallback(() => {
     const ids = filteredQuestions.map((q) => q.id)
     const nextId = pickRandomQuestionId(ids, currentQuestion?.id)
@@ -176,9 +201,10 @@ function App() {
       if (!currentQuestion) return
       setRatings((prev) => ({ ...prev, [currentQuestion.id]: confidence }))
       setAttemptCount((prev) => prev + 1)
+      announce(confidence === 'known' ? 'Marked as known.' : 'Marked as needs review.')
       goToNext()
     },
-    [currentQuestion, goToNext],
+    [announce, currentQuestion, goToNext],
   )
 
   const startInterview = useCallback(() => {
@@ -203,6 +229,7 @@ function App() {
     setInterviewResults((prev) => [...prev, wasCorrect])
     setInterviewIndex((prev) => prev + 1)
     setIsAnswerVisible(false)
+    announce(wasCorrect ? 'Marked as correct.' : 'Marked as missed.')
   }
 
   const isInterviewDone =
@@ -238,6 +265,7 @@ function App() {
       })
       setRatings((prev) => ({ ...prev, [quizQuestion.id]: 'known' }))
       setMissedQuestionIds((prev) => prev.filter((id) => id !== quizQuestion.id))
+      announce('Correct answer.')
     } else {
       setQuizFeedback('wrong')
       setQuizStreak(0)
@@ -245,6 +273,7 @@ function App() {
       setMissedQuestionIds((prev) =>
         prev.includes(quizQuestion.id) ? prev : [...prev, quizQuestion.id],
       )
+      announce('Incorrect answer added to drill list.')
     }
   }
 
@@ -270,6 +299,7 @@ function App() {
   const clearMissed = () => {
     setMissedQuestionIds([])
     setMode('practice')
+    announce('Missed-question list cleared.')
   }
 
   const resetProgress = () => {
@@ -324,8 +354,17 @@ function App() {
       if (event.key === 'd') setMode('drill')
 
       if (mode === 'practice' || mode === 'drill') {
-        if (event.key === 'r') setIsAnswerVisible((v) => !v)
-        if (event.key === 'n') (mode === 'drill' ? goToNextDrill : goToNext)()
+        if (event.key === 'r') {
+          setIsAnswerVisible((prev) => {
+            const next = !prev
+            announce(next ? 'Answer revealed.' : 'Answer hidden.')
+            return next
+          })
+        }
+        if (event.key === 'n') {
+          ;(mode === 'drill' ? goToNextDrill : goToNext)()
+          announce('Moved to next question.')
+        }
         if (event.key === '1') rateCurrentQuestion('known')
         if (event.key === '2') rateCurrentQuestion('review')
       }
@@ -333,9 +372,22 @@ function App() {
 
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [goToNext, goToNextDrill, mode, rateCurrentQuestion])
+  }, [announce, goToNext, goToNextDrill, mode, rateCurrentQuestion])
 
   const currentDisplayQuestion = mode === 'drill' ? drillQuestion : currentQuestion
+
+  const handleToggleAnswer = () => {
+    setIsAnswerVisible((prev) => {
+      const next = !prev
+      announce(next ? 'Answer revealed.' : 'Answer hidden.')
+      return next
+    })
+  }
+
+  const handleNextQuestion = () => {
+    mode === 'drill' ? goToNextDrill() : goToNext()
+    announce('Moved to next question.')
+  }
 
   const requiredProfileFields: Array<{ key: keyof UserProfile; label: string }> = [
     { key: 'state', label: 'State' },
@@ -405,6 +457,7 @@ function App() {
             aria-pressed={mode === value}
             onClick={() => {
               setMode(value as Mode)
+              announce(`Switched to ${label} mode.`)
               if (value === 'interview' && interviewQuestionIds.length === 0) startInterview()
             }}
           >
@@ -420,6 +473,10 @@ function App() {
       </nav>
 
       <section id="content">
+        <div className="sr-only" aria-live="polite" aria-atomic="true">
+          {announcement}
+        </div>
+
         {isGuideOpen && (
           <section className="guide card" aria-label="how to use this mode">
             <div className="guide__top">
@@ -428,6 +485,7 @@ function App() {
                 type="button"
                 className="ghost icon-button"
                 aria-label="Hide guide"
+                title="Hide guide"
                 onClick={() => setIsGuideOpen(false)}
               >
                 ×
@@ -474,6 +532,26 @@ function App() {
                 <span className="stats__label">Attempts</span>
                 <strong>{attemptCount}</strong>
               </div>
+            </section>
+
+            <section className="insights card" aria-label="readiness insights">
+              <p className="card__meta">Readiness insights</p>
+              <div className="insights-row">
+                <span className="stats__label">Unseen questions</span>
+                <strong>{unseenCount}</strong>
+              </div>
+              <div className="insights-row">
+                <span className="stats__label">Suggested next mode</span>
+                <strong>{suggestedMode}</strong>
+              </div>
+              {weakCategories.length > 0 && (
+                <p className="insights-text">
+                  Focus next on{' '}
+                  {weakCategories
+                    .map((item) => `${item.category} (${item.known}/${item.total})`)
+                    .join(', ')}
+                </p>
+              )}
             </section>
 
             {mode === 'practice' && (
@@ -545,17 +623,17 @@ function App() {
               )}
             </section>
 
-            <section className="actions">
+            <section className="actions study-actions">
               <button
                 type="button"
-                onClick={() => setIsAnswerVisible((v) => !v)}
+                onClick={handleToggleAnswer}
                 disabled={!currentDisplayQuestion}
               >
                 {isAnswerVisible ? 'Hide answer (R)' : 'Reveal answer (R)'}
               </button>
               <button
                 type="button"
-                onClick={mode === 'drill' ? goToNextDrill : goToNext}
+                onClick={handleNextQuestion}
                 className="ghost"
                 disabled={!currentDisplayQuestion}
               >
@@ -568,7 +646,7 @@ function App() {
               )}
             </section>
 
-            <section className="actions">
+            <section className="actions study-actions">
               <button
                 type="button"
                 onClick={() => rateCurrentQuestion('known')}
@@ -598,6 +676,30 @@ function App() {
                   </div>
                 </article>
               ))}
+            </section>
+
+            <section className="mobile-study-bar" aria-label="quick study actions">
+              <button type="button" onClick={handleToggleAnswer} disabled={!currentDisplayQuestion}>
+                {isAnswerVisible ? 'Hide' : 'Reveal'}
+              </button>
+              <button type="button" className="ghost" onClick={handleNextQuestion} disabled={!currentDisplayQuestion}>
+                Next
+              </button>
+              <button
+                type="button"
+                onClick={() => rateCurrentQuestion('known')}
+                disabled={!currentDisplayQuestion}
+              >
+                Known
+              </button>
+              <button
+                type="button"
+                className="warn"
+                onClick={() => rateCurrentQuestion('review')}
+                disabled={!currentDisplayQuestion}
+              >
+                Review
+              </button>
             </section>
           </>
         )}

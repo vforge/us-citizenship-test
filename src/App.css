@@ -113,6 +113,33 @@
   justify-content: space-between;
 }
 
+.insights {
+  margin-bottom: 0.9rem;
+  background: color-mix(in srgb, var(--panel), var(--accent-blue) 2%);
+}
+
+.insights-row {
+  display: inline-flex;
+  gap: 0.45rem;
+  align-items: center;
+  margin-right: 0.75rem;
+  margin-bottom: 0.35rem;
+}
+
+.insights-row strong {
+  font-size: 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--border), transparent 20%);
+  border-radius: 999px;
+  padding: 0.08rem 0.45rem;
+  background: color-mix(in srgb, var(--panel), var(--accent-blue) 4%);
+}
+
+.insights-text {
+  margin-top: 0.15rem;
+  font-size: 0.86rem;
+  opacity: 0.85;
+}
+
 .card {
   border: 1px solid color-mix(in srgb, var(--border), transparent 22%);
   border-radius: 14px;
@@ -207,6 +234,21 @@
 
 .actions {
   margin-top: 0.9rem;
+}
+
+.mobile-study-bar {
+  display: none;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  border: 0;
+  padding: 0;
+  clip: rect(0 0 0 0);
+  overflow: hidden;
 }
 
 button {
@@ -395,6 +437,35 @@ button.danger {
     width: 100%;
   }
 
+  .study-actions {
+    display: none;
+  }
+
+  .mobile-study-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 70;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.4rem;
+    padding: 0.55rem;
+    padding-bottom: calc(0.55rem + env(safe-area-inset-bottom));
+    border-top: 1px solid color-mix(in srgb, var(--border), transparent 20%);
+    background: color-mix(in srgb, var(--panel), black 2%);
+  }
+
+  .mobile-study-bar button {
+    min-height: 40px;
+    padding-inline: 0.35rem;
+    font-size: 0.8rem;
+  }
+
+  .app {
+    padding-bottom: 5.5rem;
+  }
+
   .stats {
     gap: 0.45rem;
   }
@@ -403,12 +474,27 @@ button.danger {
     font-size: 0.86rem;
   }
 
+  .insights {
+    padding-bottom: 0.85rem;
+  }
+
   .subtitle {
     font-size: 0.96rem;
   }
 
   .card__meta {
     font-size: 0.78rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
