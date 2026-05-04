@@ -822,9 +822,12 @@ function App() {
 
       <footer className="app-footer" aria-label="site footer">
         <p>
-          © 2026 Bartosz Bentkowski (vforge). This project is free and open source. Civics
-          questions and answers may change or contain mistakes in this app. Always verify with
-          official USCIS resources:
+          © 2026 Bartosz Bentkowski (vforge). This project is free and open source. I did my best
+          to source the civics data, but it may contain mistakes. Corrections are welcome via
+          <a href="https://github.com/vforge/us-citizenship-test" target="_blank" rel="noreferrer">
+            {' '}GitHub
+          </a>
+          . Always verify with official USCIS resources:
           <a href="https://www.uscis.gov/citizenship/find-study-materials-and-resources" target="_blank" rel="noreferrer">
             {' '}USCIS study materials
           </a>
