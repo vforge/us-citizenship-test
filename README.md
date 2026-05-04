@@ -168,3 +168,9 @@ This project is provided **as-is**, without warranties or guarantees.
 MIT — see [LICENSE](./LICENSE)
 
 Author: **Bartosz Bentkowski (vforge)**
+
+---
+
+## Project note
+
+This entire project was generated with AI assistance and used as one of my experiments for testing AI tooling. I was curious how it would look, how it would work in practice, and how far it could go as a real app.
