@@ -357,6 +357,45 @@ button.danger {
   font-weight: 600;
 }
 
+.zip-lookup {
+  display: grid;
+  gap: 0.55rem;
+  margin-bottom: 0.85rem;
+  padding: 0.65rem;
+  border: 1px dashed color-mix(in srgb, var(--accent-blue), var(--border) 55%);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--panel), var(--accent-blue) 2%);
+}
+
+.zip-lookup > label {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.zip-lookup input {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem;
+  background: var(--panel);
+  color: var(--text);
+  max-width: 220px;
+}
+
+.zip-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.zip-actions button {
+  width: fit-content;
+}
+
+.zip-status {
+  font-size: 0.84rem;
+  opacity: 0.9;
+}
+
 .profile-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -366,6 +405,15 @@ button.danger {
 .profile-grid label {
   display: grid;
   gap: 0.3rem;
+}
+
+.field-help {
+  font-size: 0.76rem;
+  opacity: 0.8;
+}
+
+.field-help a {
+  color: var(--accent-blue);
 }
 
 .profile-grid input {

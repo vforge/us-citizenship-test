@@ -15,6 +15,7 @@ Built with React + TypeScript + Vite, this app supports:
 - Multiple-choice quiz mode
 - Missed-question drill mode
 - State-specific answer fields (governor, senators, representative, etc.)
+- ZIP-based browser auto-fill for state/capital/governor/senators
 - Local progress save + JSON export/import
 - Printable study guide
 - Installable on phones (PWA manifest + service worker)
@@ -72,6 +73,18 @@ End-to-end tests (headed):
 ```bash
 pnpm test:e2e:headed
 ```
+
+### State-specific settings auto-fill
+
+In **Settings**, you can enter a U.S. ZIP code and use **Auto-fill from ZIP**.
+
+This browser-only flow uses ZIP lookup + local state official profiles to prefill:
+- state
+- state capital
+- governor
+- both senators
+
+Representative can still require district-specific input and should be confirmed manually.
 
 ### 5) Install on phone
 
@@ -152,6 +165,8 @@ This project is free and open source.
 I did my best to source and compile the civics questions and accepted answers responsibly, but mistakes or outdated information can still happen.
 
 If you spot an issue, correction suggestions are welcome.
+
+State office-holder data and civics content can become outdated over time and should be treated as study guidance, not an official source.
 
 Civics questions, accepted answers, and office-holder information can change over time and may be incorrect or outdated in this app.
 
