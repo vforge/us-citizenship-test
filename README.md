@@ -4,6 +4,8 @@
 [![Deploy to GitHub Pages](https://github.com/vforge/us-citizenship-test/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/vforge/us-citizenship-test/actions/workflows/deploy-pages.yml)
 [![Live Site](https://img.shields.io/badge/live-github%20pages-1d4ed8)](https://vforge.github.io/us-citizenship-test/)
 
+![U.S. Citizenship Test Practice social preview](./public/og-image.png)
+
 A lightweight, open-source web app for practicing the USCIS civics test.
 
 Built with React + TypeScript + Vite, this app supports:
@@ -96,6 +98,14 @@ To enable GitHub Pages deployment in your repo:
 2. Under **Build and deployment**, set **Source** to **GitHub Actions**.
 3. Merge/push to `master`.
 4. GitHub will publish the site automatically.
+
+### Search indexing (recommended)
+
+After each major release, submit your Pages URL and sitemap:
+
+- Google Search Console property: `https://vforge.github.io/us-citizenship-test/`
+- Bing Webmaster Tools site: `https://vforge.github.io/us-citizenship-test/`
+- Sitemap: `https://vforge.github.io/us-citizenship-test/sitemap.xml`
 
 ---
 
