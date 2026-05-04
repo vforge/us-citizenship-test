@@ -23,7 +23,9 @@ Built with React + TypeScript + Vite, this app supports:
 
 ## Why this exists
 
-This project is designed to make civics test prep simple, fast, and accessible in the browser.
+This project was originally created for my own use and to help some of my family prepare for the civics test.
+
+It started as an internal tool, but if anyone else finds it useful, I’m very happy to share it publicly here on GitHub.
 
 ---
 
