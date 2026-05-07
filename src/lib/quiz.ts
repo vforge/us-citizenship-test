@@ -32,20 +32,14 @@ export function pickUniqueQuestionIds(ids: number[], count: number) {
 
 export function buildMultipleChoiceOptions(
   question: CivicsQuestion,
-  allQuestions: CivicsQuestion[],
   optionCount = 5,
+  acceptedAnswers: string[] = question.answers,
 ) {
-  const correct = question.answers[0]
+  const normalizedAccepted = new Set(acceptedAnswers.map((answer) => answer.trim().toLowerCase()))
+  const correct = acceptedAnswers[0] ?? question.answers[0]
 
-  const dedicatedDistractors = getQuestionDistractors(question)
-
-  const fallbackDistractors = allQuestions
-    .filter((q) => q.id !== question.id)
-    .map((q) => q.answers[0])
-    .filter((answer): answer is string => Boolean(answer) && answer !== correct)
-
-  const uniqueDistractors = [...new Set([...dedicatedDistractors, ...fallbackDistractors])]
-    .filter((candidate) => !question.answers.includes(candidate))
+  const uniqueDistractors = [...new Set(getQuestionDistractors(question))]
+    .filter((candidate) => !normalizedAccepted.has(candidate.trim().toLowerCase()))
     .sort(() => Math.random() - 0.5)
     .slice(0, Math.max(0, optionCount - 1))
 
@@ -55,6 +49,14 @@ export function buildMultipleChoiceOptions(
     options,
     correct,
   }
+}
+
+export const DYNAMIC_PROFILE_QUESTION_IDS = [20, 23, 28, 29, 43, 44, 47] as const
+
+export function requiresProfileAnswer(questionId: number) {
+  return DYNAMIC_PROFILE_QUESTION_IDS.includes(
+    questionId as (typeof DYNAMIC_PROFILE_QUESTION_IDS)[number],
+  )
 }
 
 export function getDynamicAnswers(questionId: number, profile: UserProfile) {

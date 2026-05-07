@@ -8,6 +8,7 @@ import {
   mergeAcceptedAnswers,
   pickRandomQuestionId,
   pickUniqueQuestionIds,
+  requiresProfileAnswer,
 } from './lib/quiz'
 import './App.css'
 
@@ -68,9 +69,7 @@ function App() {
   const [interviewIndex, setInterviewIndex] = useState(0)
   const [interviewResults, setInterviewResults] = useState<boolean[]>([])
 
-  const [quizQuestionId, setQuizQuestionId] = useState<number | null>(() =>
-    getRandomQuestionId(),
-  )
+  const [quizQuestionId, Yeah.setQuizQuestionId] = useState<number | null>(null)
   const [quizChoice, setQuizChoice] = useState<string | null>(null)
   const [quizFeedback, setQuizFeedback] = useState<'correct' | 'wrong' | null>(null)
   const [quizStreak, setQuizStreak] = useState(0)
@@ -270,26 +269,91 @@ function App() {
     interviewQuestionIds.length > 0 && interviewIndex >= interviewQuestionIds.length
   const interviewCorrectCount = interviewResults.filter(Boolean).length
 
-  const quizQuestion = QUESTIONS.find((q) => q.id === quizQuestionId) ?? null
+  const hasCustomProfileAnswerForQuizQuestion = useCallback(
+    (questionId: number) => {
+      switch (questionId) {
+        case 20:
+          return Boolean(profile.senator1?.trim() || profile.senator2?.trim())
+        case 23:
+          return Boolean(profile.representative?.trim())
+        case 28:
+          return Boolean(
+            profile.president?.trim() &&
+              profile.president.trim() !== FEDERAL_OFFICIAL_DEFAULTS.president,
+          )
+        case 29:
+          return Boolean(
+            profile.vicePresident?.trim() &&
+              profile.vicePresident.trim() !== FEDERAL_OFFICIAL_DEFAULTS.vicePresident,
+          )
+        case 43:
+          return Boolean(profile.governor?.trim())
+        case 44:
+          return Boolean(profile.stateCapital?.trim())
+        case 47:
+          return Boolean(
+            profile.speaker?.trim() && profile.speaker.trim() !== FEDERAL_OFFICIAL_DEFAULTS.speaker,
+          )
+        default:
+          return true
+      }
+    },
+    [profile],
+  )
+
+  const quizEligibleQuestions = useMemo(
+    () =>
+      QUESTIONS.filter(
+        (question) =>
+          !requiresProfileAnswer(question.id) ||
+          hasCustomProfileAnswerForQuizQuestion(question.id),
+      ),
+    [hasCustomProfileAnswerForQuizQuestion],
+  )
+
+  const quizEligibleQuestionIds = useMemo(
+    () => quizEligibleQuestions.map((question) => question.id),
+    [quizEligibleQuestions],
+  )
+
+  useEffect(() => {
+    if (quizEligibleQuestionIds.length === 0) {
+      setQuizQuestionId(null)
+      return
+    }
+
+    if (quizQuestionId && quizEligibleQuestionIds.includes(quizQuestionId)) {
+      return
+    }
+
+    setQuizQuestionId(pickRandomQuestionId(quizEligibleQuestionIds) ?? null)
+    setQuizChoice(null)
+    setQuizFeedback(null)
+  }, [quizEligibleQuestionIds, quizQuestionId])
+
+  const quizQuestion = quizEligibleQuestions.find((q) => q.id === quizQuestionId) ?? null
+  const quizAcceptedAnswers = useMemo(
+    () => (quizQuestion ? mergeAcceptedAnswers(quizQuestion, profile) : []),
+    [quizQuestion, profile],
+  )
   const quizOptions = useMemo(() => {
     if (!quizQuestion) return { options: [] as string[], correct: '' }
-    return buildMultipleChoiceOptions(quizQuestion, QUESTIONS, 5)
-  }, [quizQuestion])
+    return buildMultipleChoiceOptions(quizQuestion, 5, quizAcceptedAnswers)
+  }, [quizQuestion, quizAcceptedAnswers])
 
   const nextQuizQuestion = useCallback(() => {
-    const ids = QUESTIONS.map((q) => q.id)
-    const nextId = pickRandomQuestionId(ids, quizQuestionId ?? undefined)
+    const nextId = pickRandomQuestionId(quizEligibleQuestionIds, quizQuestionId ?? undefined)
     setQuizQuestionId(nextId)
     setQuizChoice(null)
     setQuizFeedback(null)
-  }, [quizQuestionId])
+  }, [quizEligibleQuestionIds, quizQuestionId])
 
   const submitQuizAnswer = (option: string) => {
     if (!quizQuestion) return
     setQuizChoice(option)
     setQuizAttemptsTotal((prev) => prev + 1)
 
-    if (option === quizOptions.correct) {
+    if (quizAcceptedAnswers.includes(option)) {
       setQuizFeedback('correct')
       setQuizCorrectTotal((prev) => prev + 1)
       setQuizStreak((prev) => {
@@ -961,7 +1025,7 @@ function App() {
                     <p className={quizFeedback === 'correct' ? 'ok' : 'bad'} aria-live="polite">
                       {quizFeedback === 'correct'
                         ? '✅ Correct'
-                        : `❌ Not quite. Accepted: ${quizOptions.correct}`}
+                        : `❌ Not quite. Accepted: ${quizAcceptedAnswers.join(' • ')}`}
                     </p>
                   )}
                 </>
