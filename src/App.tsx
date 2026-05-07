@@ -28,6 +28,7 @@ const GUIDE_OPEN_KEY = 'us-citizenship-test.guide-open.v1'
 const MODE_KEY = 'us-citizenship-test.mode.v1'
 const INTERVIEW_QUESTION_COUNT = 10
 const INTERVIEW_PASS_MARK = 6
+const DEBUG_GUIDE = import.meta.env.DEV
 
 function sanitizeProfile(profile?: Partial<UserProfile> | null): UserProfile {
   return {
@@ -55,9 +56,44 @@ function shuffleIds(ids: number[]) {
 }
 
 function App() {
-  const [mode, setMode] = useState<Mode>('practice')
+  const [mode, setMode] = useState<Mode>(() => {
+    try {
+      const rawMode = localStorage.getItem(MODE_KEY)
+      if (
+        rawMode === 'practice' ||
+        rawMode === 'interview' ||
+        rawMode === 'quiz' ||
+        rawMode === 'drill' ||
+        rawMode === 'settings'
+      ) {
+        return rawMode
+      }
+    } catch {
+      // ignore invalid storage
+    }
+
+    return 'practice'
+  })
   const [filter, setFilter] = useState<Filter>('all')
-  const [isGuideOpen, setIsGuideOpen] = useState(true)
+  const [isGuideOpen, setIsGuideOpen] = useState(() => {
+    try {
+      const rawGuideOpen = localStorage.getItem(GUIDE_OPEN_KEY)
+      const next = rawGuideOpen !== null ? rawGuideOpen === 'true' : true
+      if (DEBUG_GUIDE) {
+        console.log('[guide] init', {
+          href: window.location.href,
+          rawGuideOpen,
+          resolved: next,
+        })
+      }
+      return next
+    } catch (error) {
+      if (DEBUG_GUIDE) {
+        console.log('[guide] init error', error)
+      }
+      return true
+    }
+  })
   const [isAnswerVisible, setIsAnswerVisible] = useState(false)
   const [announcement, setAnnouncement] = useState('')
   const [zipCode, setZipCode] = useState('')
@@ -98,6 +134,32 @@ function App() {
 
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
+  const updateGuideOpen = useCallback((next: boolean) => {
+    if (DEBUG_GUIDE) {
+      console.log('[guide] updateGuideOpen:start', {
+        next,
+        beforeState: isGuideOpen,
+        beforeStorage: localStorage.getItem(GUIDE_OPEN_KEY),
+      })
+    }
+
+    setIsGuideOpen(next)
+
+    try {
+      localStorage.setItem(GUIDE_OPEN_KEY, String(next))
+      if (DEBUG_GUIDE) {
+        console.log('[guide] updateGuideOpen:stored', {
+          next,
+          afterStorage: localStorage.getItem(GUIDE_OPEN_KEY),
+        })
+      }
+    } catch (error) {
+      if (DEBUG_GUIDE) {
+        console.log('[guide] updateGuideOpen:error', error)
+      }
+    }
+  }, [isGuideOpen])
+
   useEffect(() => {
     const timer = window.setInterval(() => {
       setElapsedSeconds(Math.floor((Date.now() - quizStartedAt) / 1000))
@@ -124,21 +186,6 @@ function App() {
         setMissedQuestionIds(parsed.filter((n) => Number.isInteger(n)))
       }
 
-      const rawGuideOpen = localStorage.getItem(GUIDE_OPEN_KEY)
-      if (rawGuideOpen !== null) {
-        setIsGuideOpen(rawGuideOpen === 'true')
-      }
-
-      const rawMode = localStorage.getItem(MODE_KEY)
-      if (
-        rawMode === 'practice' ||
-        rawMode === 'interview' ||
-        rawMode === 'quiz' ||
-        rawMode === 'drill' ||
-        rawMode === 'settings'
-      ) {
-        setMode(rawMode)
-      }
     } catch {
       // ignore invalid storage
     }
@@ -158,11 +205,43 @@ function App() {
 
   useEffect(() => {
     localStorage.setItem(GUIDE_OPEN_KEY, String(isGuideOpen))
+    if (DEBUG_GUIDE) {
+      console.log('[guide] effect persist', {
+        state: isGuideOpen,
+        storage: localStorage.getItem(GUIDE_OPEN_KEY),
+      })
+    }
   }, [isGuideOpen])
 
   useEffect(() => {
     localStorage.setItem(MODE_KEY, mode)
   }, [mode])
+
+  useEffect(() => {
+    if (!DEBUG_GUIDE) return
+
+    console.log('[guide] render/state changed', {
+      isGuideOpen,
+      storage: localStorage.getItem(GUIDE_OPEN_KEY),
+      href: window.location.href,
+    })
+  }, [isGuideOpen])
+
+  useEffect(() => {
+    if (!DEBUG_GUIDE) return
+
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== GUIDE_OPEN_KEY) return
+      console.log('[guide] storage event', {
+        oldValue: event.oldValue,
+        newValue: event.newValue,
+        href: window.location.href,
+      })
+    }
+
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [])
 
   const filteredQuestions = useMemo(() => {
     if (filter === 'all') return QUESTIONS
@@ -602,6 +681,7 @@ function App() {
     const value = profile[key]
     return !value || value.trim().length === 0
   })
+  const hasMissingRequiredSettings = missingRequiredSettings.length > 0
 
   const modeGuide: Record<Mode, { title: string; detail: string }> = {
     practice: {
@@ -649,24 +729,36 @@ function App() {
           ['quiz', 'Quiz'],
           ['drill', `Drill (${missedQuestionIds.length})`],
           ['settings', 'Settings'],
-        ].map(([value, label]) => (
-          <button
-            key={value}
-            type="button"
-            className={mode === value ? 'is-active ghost' : 'ghost'}
-            aria-pressed={mode === value}
-            onClick={() => {
-              setMode(value as Mode)
-              announce(`Switched to ${label} mode.`)
-              if (value === 'interview' && interviewQuestionIds.length === 0) startInterview()
-            }}
-          >
-            {label}
-          </button>
-        ))}
+        ].map(([value, label]) => {
+          const isSettingsButton = value === 'settings'
+          const accessibleLabel =
+            isSettingsButton && hasMissingRequiredSettings ? `${label} (required fields missing)` : label
+
+          return (
+            <button
+              key={value}
+              type="button"
+              className={mode === value ? 'is-active ghost' : 'ghost'}
+              aria-pressed={mode === value}
+              aria-label={accessibleLabel}
+              onClick={() => {
+                setMode(value as Mode)
+                announce(`Switched to ${label} mode.`)
+                if (value === 'interview' && interviewQuestionIds.length === 0) startInterview()
+              }}
+            >
+              <span>{label}</span>
+              {isSettingsButton && hasMissingRequiredSettings && (
+                <span className="warning-badge" aria-hidden="true" title="Required fields missing">
+                  ⚠️
+                </span>
+              )}
+            </button>
+          )
+        })}
 
         {!isGuideOpen && (
-          <button type="button" className="ghost" onClick={() => setIsGuideOpen(true)}>
+          <button type="button" className="ghost" onClick={() => updateGuideOpen(true)}>
             Show guide
           </button>
         )}
@@ -686,7 +778,7 @@ function App() {
                 className="ghost icon-button"
                 aria-label="Hide guide"
                 title="Hide guide"
-                onClick={() => setIsGuideOpen(false)}
+                onClick={() => updateGuideOpen(false)}
               >
                 ×
               </button>
@@ -694,7 +786,7 @@ function App() {
             <h2>{modeGuide[mode].title}</h2>
             <p>{modeGuide[mode].detail}</p>
 
-            {missingRequiredSettings.length > 0 && (
+            {hasMissingRequiredSettings && (
               <div className="guide-warning" role="status" aria-live="polite">
                 <p>
                   Before you start, complete required Settings fields:{' '}
@@ -1085,26 +1177,26 @@ function App() {
                 </label>
                 <label htmlFor="zip-input">
                   <span>ZIP code</span>
-                  <input
-                    id="zip-input"
-                    inputMode="numeric"
-                    pattern="[0-9]{5}"
-                    maxLength={5}
-                    placeholder="e.g. 94110"
-                    value={zipCode}
-                    onChange={(event) => setZipCode(event.target.value.replace(/\D/g, '').slice(0, 5))}
-                  />
+                  <div className="zip-input-row">
+                    <input
+                      id="zip-input"
+                      inputMode="numeric"
+                      pattern="[0-9]{5}"
+                      maxLength={5}
+                      placeholder="e.g. 94110"
+                      value={zipCode}
+                      onChange={(event) => setZipCode(event.target.value.replace(/\D/g, '').slice(0, 5))}
+                    />
+                    <button
+                      type="button"
+                      className="ghost"
+                      onClick={handleZipLookup}
+                      disabled={isZipLookupLoading}
+                    >
+                      {isZipLookupLoading ? 'Loading…' : 'Auto-fill from ZIP'}
+                    </button>
+                  </div>
                 </label>
-                <div className="zip-actions">
-                  <button
-                    type="button"
-                    className="ghost"
-                    onClick={handleZipLookup}
-                    disabled={isZipLookupLoading}
-                  >
-                    {isZipLookupLoading ? 'Loading…' : 'Auto-fill from ZIP'}
-                  </button>
-                </div>
                 {zipLookupStatus && (
                   <p className="zip-status" aria-live="polite">
                     {zipLookupStatus}
@@ -1122,7 +1214,22 @@ function App() {
                   ['representative', 'Representative'],
                 ].map(([key, label]) => (
                   <label key={key}>
-                    <span>{label}</span>
+                    <span className="field-label-row">
+                      <span>{label}</span>
+                      {key === 'representative' && (
+                        <small className="field-help field-help--inline">
+                          Find your representative at{' '}
+                          <a
+                            href="https://www.house.gov/representatives/find-your-representative"
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            house.gov
+                          </a>
+                          .
+                        </small>
+                      )}
+                    </span>
                     <input
                       value={(profile[key as keyof UserProfile] as string) ?? ''}
                       onChange={(event) =>
@@ -1132,19 +1239,6 @@ function App() {
                         }))
                       }
                     />
-                    {key === 'representative' && (
-                      <small className="field-help">
-                        Find your representative at{' '}
-                        <a
-                          href="https://www.house.gov/representatives/find-your-representative"
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          house.gov
-                        </a>
-                        .
-                      </small>
-                    )}
                   </label>
                 ))}
               </div>
