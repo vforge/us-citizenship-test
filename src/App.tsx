@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { QUESTIONS } from './data/questions'
-import { FEDERAL_OFFICIAL_DEFAULTS } from './data/federal-officials'
 import { STATE_OFFICIALS_BY_ABBR } from './data/state-officials'
 import type { UserProfile } from './lib/quiz'
 import {
@@ -29,6 +28,17 @@ const GUIDE_OPEN_KEY = 'us-citizenship-test.guide-open.v1'
 const MODE_KEY = 'us-citizenship-test.mode.v1'
 const INTERVIEW_QUESTION_COUNT = 10
 const INTERVIEW_PASS_MARK = 6
+
+function sanitizeProfile(profile?: Partial<UserProfile> | null): UserProfile {
+  return {
+    state: profile?.state,
+    stateCapital: profile?.stateCapital,
+    governor: profile?.governor,
+    senator1: profile?.senator1,
+    senator2: profile?.senator2,
+    representative: profile?.representative,
+  }
+}
 
 function getRandomQuestionId() {
   const randomIndex = Math.floor(Math.random() * QUESTIONS.length)
@@ -62,7 +72,14 @@ function App() {
     shuffleIds(QUESTIONS.map((q) => q.id)),
   )
   const [practiceDeckCursor, setPracticeDeckCursor] = useState(0)
-  const [profile, setProfile] = useState<UserProfile>({})
+  const [profile, setProfile] = useState<UserProfile>(() => {
+    try {
+      const rawProfile = localStorage.getItem(PROFILE_KEY)
+      return rawProfile ? sanitizeProfile(JSON.parse(rawProfile) as UserProfile) : {}
+    } catch {
+      return {}
+    }
+  })
   const [missedQuestionIds, setMissedQuestionIds] = useState<number[]>([])
 
   const [interviewQuestionIds, setInterviewQuestionIds] = useState<number[]>([])
@@ -99,11 +116,6 @@ function App() {
             .map(([key, value]) => [Number(key), value]),
         ) as Record<number, Confidence>
         setRatings(sanitized)
-      }
-
-      const rawProfile = localStorage.getItem(PROFILE_KEY)
-      if (rawProfile) {
-        setProfile(JSON.parse(rawProfile) as UserProfile)
       }
 
       const rawMissed = localStorage.getItem(MISSED_KEY)
@@ -276,24 +288,10 @@ function App() {
           return Boolean(profile.senator1?.trim() || profile.senator2?.trim())
         case 23:
           return Boolean(profile.representative?.trim())
-        case 28:
-          return Boolean(
-            profile.president?.trim() &&
-              profile.president.trim() !== FEDERAL_OFFICIAL_DEFAULTS.president,
-          )
-        case 29:
-          return Boolean(
-            profile.vicePresident?.trim() &&
-              profile.vicePresident.trim() !== FEDERAL_OFFICIAL_DEFAULTS.vicePresident,
-          )
         case 43:
           return Boolean(profile.governor?.trim())
         case 44:
           return Boolean(profile.stateCapital?.trim())
-        case 47:
-          return Boolean(
-            profile.speaker?.trim() && profile.speaker.trim() !== FEDERAL_OFFICIAL_DEFAULTS.speaker,
-          )
         default:
           return true
       }
@@ -433,7 +431,7 @@ function App() {
     const text = await file.text()
     const parsed = JSON.parse(text) as AppBackup
     if (parsed.ratings) setRatings(parsed.ratings)
-    if (parsed.profile) setProfile(parsed.profile)
+    if (parsed.profile) setProfile(sanitizeProfile(parsed.profile))
     if (parsed.missedQuestionIds) setMissedQuestionIds(parsed.missedQuestionIds)
   }
 
@@ -496,21 +494,6 @@ function App() {
     announce('Flashcard deck shuffled.')
   }
 
-  const applyFederalDefaults = () => {
-    setProfile((prev) => ({
-      ...prev,
-      president: prev.president?.trim() ? prev.president : FEDERAL_OFFICIAL_DEFAULTS.president,
-      vicePresident: prev.vicePresident?.trim()
-        ? prev.vicePresident
-        : FEDERAL_OFFICIAL_DEFAULTS.vicePresident,
-      speaker: prev.speaker?.trim() ? prev.speaker : FEDERAL_OFFICIAL_DEFAULTS.speaker,
-    }))
-
-    const message = `Filled federal offices (updated ${FEDERAL_OFFICIAL_DEFAULTS.updatedAt}).`
-    setZipLookupStatus(message)
-    announce(message)
-  }
-
   const handleZipLookup = async () => {
     const normalizedZip = zipCode.trim()
 
@@ -551,16 +534,11 @@ function App() {
         governor: stateInfo?.governor ?? prev.governor ?? '',
         senator1: stateInfo?.senators?.[0] ?? prev.senator1 ?? '',
         senator2: stateInfo?.senators?.[1] ?? prev.senator2 ?? '',
-        president: prev.president?.trim() ? prev.president : FEDERAL_OFFICIAL_DEFAULTS.president,
-        vicePresident: prev.vicePresident?.trim()
-          ? prev.vicePresident
-          : FEDERAL_OFFICIAL_DEFAULTS.vicePresident,
-        speaker: prev.speaker?.trim() ? prev.speaker : FEDERAL_OFFICIAL_DEFAULTS.speaker,
       }))
 
       const message = stateInfo
-        ? `Auto-filled profile for ${stateInfo.state} and federal offices.`
-        : `Found ${stateName}; filled federal offices, but no local state profile is available.`
+        ? `Auto-filled profile for ${stateInfo.state}.`
+        : `Found ${stateName}, but no local state profile is available.`
 
       setZipLookupStatus(message)
       announce(message)
@@ -1073,9 +1051,6 @@ function App() {
                   >
                     {isZipLookupLoading ? 'Loading…' : 'Auto-fill from ZIP'}
                   </button>
-                  <button type="button" className="ghost" onClick={applyFederalDefaults}>
-                    Fill federal offices
-                  </button>
                 </div>
                 {zipLookupStatus && (
                   <p className="zip-status" aria-live="polite">
@@ -1092,9 +1067,6 @@ function App() {
                   ['senator1', 'Senator 1'],
                   ['senator2', 'Senator 2'],
                   ['representative', 'Representative'],
-                  ['president', 'President'],
-                  ['vicePresident', 'Vice President'],
-                  ['speaker', 'Speaker of the House'],
                 ].map(([key, label]) => (
                   <label key={key}>
                     <span>{label}</span>
