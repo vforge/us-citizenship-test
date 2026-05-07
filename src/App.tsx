@@ -69,7 +69,7 @@ function App() {
   const [interviewIndex, setInterviewIndex] = useState(0)
   const [interviewResults, setInterviewResults] = useState<boolean[]>([])
 
-  const [quizQuestionId, Yeah.setQuizQuestionId] = useState<number | null>(null)
+  const [quizQuestionId, setQuizQuestionId] = useState<number | null>(null)
   const [quizChoice, setQuizChoice] = useState<string | null>(null)
   const [quizFeedback, setQuizFeedback] = useState<'correct' | 'wrong' | null>(null)
   const [quizStreak, setQuizStreak] = useState(0)
