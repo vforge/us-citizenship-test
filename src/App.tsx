@@ -494,6 +494,44 @@ function App() {
     announce('Flashcard deck shuffled.')
   }
 
+  const stateOptions = useMemo(
+    () =>
+      Object.entries(STATE_OFFICIALS_BY_ABBR)
+        .map(([abbr, info]) => ({ abbr, name: info.state }))
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    [],
+  )
+
+  const selectedStateAbbr = useMemo(() => {
+    const normalizedState = profile.state?.trim().toLowerCase()
+    if (!normalizedState) return ''
+
+    const match = stateOptions.find(
+      ({ abbr, name }) =>
+        abbr.toLowerCase() === normalizedState || name.trim().toLowerCase() === normalizedState,
+    )
+
+    return match?.abbr ?? ''
+  }, [profile.state, stateOptions])
+
+  const handleStateSelect = (stateAbbr: string) => {
+    const stateInfo = STATE_OFFICIALS_BY_ABBR[stateAbbr]
+    if (!stateInfo) return
+
+    setProfile((prev) => ({
+      ...prev,
+      state: stateInfo.state,
+      stateCapital: stateInfo.stateCapital,
+      governor: stateInfo.governor,
+      senator1: stateInfo.senators[0],
+      senator2: stateInfo.senators[1],
+    }))
+
+    const message = `Auto-filled profile for ${stateInfo.state}.`
+    setZipLookupStatus(message)
+    announce(message)
+  }
+
   const handleZipLookup = async () => {
     const normalizedZip = zipCode.trim()
 
@@ -1030,6 +1068,21 @@ function App() {
               <h2>Your reference profile</h2>
 
               <div className="zip-lookup" role="group" aria-label="ZIP code auto-fill">
+                <label htmlFor="state-select">
+                  <span>State</span>
+                  <select
+                    id="state-select"
+                    value={selectedStateAbbr}
+                    onChange={(event) => handleStateSelect(event.target.value)}
+                  >
+                    <option value="">Select a state</option>
+                    {stateOptions.map((option) => (
+                      <option key={option.abbr} value={option.abbr}>
+                        {option.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <label htmlFor="zip-input">
                   <span>ZIP code</span>
                   <input
