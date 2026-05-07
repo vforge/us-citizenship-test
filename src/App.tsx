@@ -34,6 +34,15 @@ function getRandomQuestionId() {
   return QUESTIONS[randomIndex]?.id ?? null
 }
 
+function shuffleIds(ids: number[]) {
+  const copy = [...ids]
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[copy[i], copy[j]] = [copy[j], copy[i]]
+  }
+  return copy
+}
+
 function App() {
   const [mode, setMode] = useState<Mode>('practice')
   const [filter, setFilter] = useState<Filter>('all')
@@ -48,6 +57,10 @@ function App() {
   const [currentQuestionId, setCurrentQuestionId] = useState<number | null>(() =>
     getRandomQuestionId(),
   )
+  const [practiceDeckIds, setPracticeDeckIds] = useState<number[]>(() =>
+    shuffleIds(QUESTIONS.map((q) => q.id)),
+  )
+  const [practiceDeckCursor, setPracticeDeckCursor] = useState(0)
   const [profile, setProfile] = useState<UserProfile>({})
   const [missedQuestionIds, setMissedQuestionIds] = useState<number[]>([])
 
@@ -147,19 +160,20 @@ function App() {
   }, [filter, ratings])
 
   useEffect(() => {
-    if (filteredQuestions.length === 0) {
-      setCurrentQuestionId(null)
-      return
-    }
+    setPracticeDeckIds(shuffleIds(filteredQuestions.map((q) => q.id)))
+    setPracticeDeckCursor(0)
+    setIsAnswerVisible(false)
+  }, [filter])
 
-    const existsInDeck = filteredQuestions.some((q) => q.id === currentQuestionId)
-    if (!existsInDeck) {
-      setCurrentQuestionId(filteredQuestions[0].id)
-      setIsAnswerVisible(false)
-    }
-  }, [filteredQuestions, currentQuestionId])
+  useEffect(() => {
+    if (filter === 'all') return
+    setPracticeDeckIds(shuffleIds(filteredQuestions.map((q) => q.id)))
+    setPracticeDeckCursor(0)
+    setIsAnswerVisible(false)
+  }, [filter, ratings, filteredQuestions])
 
-  const currentQuestion = filteredQuestions.find((q) => q.id === currentQuestionId)
+  const currentQuestion =
+    filteredQuestions.find((q) => q.id === practiceDeckIds[practiceDeckCursor]) ?? null
 
   const knownCount = Object.values(ratings).filter((v) => v === 'known').length
   const reviewCount = Object.values(ratings).filter((v) => v === 'review').length
@@ -211,11 +225,10 @@ function App() {
   }, [])
 
   const goToNext = useCallback(() => {
-    const ids = filteredQuestions.map((q) => q.id)
-    const nextId = pickRandomQuestionId(ids, currentQuestion?.id)
-    setCurrentQuestionId(nextId)
+    if (practiceDeckIds.length === 0) return
+    setPracticeDeckCursor((prev) => (prev + 1) % practiceDeckIds.length)
     setIsAnswerVisible(false)
-  }, [filteredQuestions, currentQuestion?.id])
+  }, [practiceDeckIds.length])
 
   const rateCurrentQuestion = useCallback(
     (confidence: Confidence) => {
@@ -328,6 +341,8 @@ function App() {
     setAttemptCount(0)
     setFilter('all')
     setCurrentQuestionId(getRandomQuestionId())
+    setPracticeDeckIds(shuffleIds(QUESTIONS.map((q) => q.id)))
+    setPracticeDeckCursor(0)
     setIsAnswerVisible(false)
     setMissedQuestionIds([])
   }
@@ -408,6 +423,13 @@ function App() {
   const handleNextQuestion = () => {
     mode === 'drill' ? goToNextDrill() : goToNext()
     announce('Moved to next question.')
+  }
+
+  const shufflePracticeDeck = () => {
+    setPracticeDeckIds(shuffleIds(filteredQuestions.map((q) => q.id)))
+    setPracticeDeckCursor(0)
+    setIsAnswerVisible(false)
+    announce('Flashcard deck shuffled.')
   }
 
   const applyFederalDefaults = () => {
@@ -679,6 +701,9 @@ function App() {
                 </div>
 
                 <div className="filter-buttons">
+                  <button type="button" className="ghost" onClick={shufflePracticeDeck}>
+                    Shuffle deck
+                  </button>
                   <button type="button" className="ghost" onClick={startDrill}>
                     Drill missed ({missedQuestionIds.length})
                   </button>
@@ -695,7 +720,7 @@ function App() {
             <section className="card question-card" aria-live="polite">
               {currentDisplayQuestion ? (
                 <>
-                  <p className="card__meta">
+                  <p className="card__meta" data-question-id={currentDisplayQuestion.id}>
                     Q{currentDisplayQuestion.id} • {currentDisplayQuestion.category}
                   </p>
                   <h2>{currentDisplayQuestion.question}</h2>
@@ -842,7 +867,7 @@ function App() {
                 </>
               ) : interviewQuestion ? (
                 <>
-                  <p className="card__meta">
+                  <p className="card__meta" data-question-id={interviewQuestion.id}>
                     Interview Q{interviewIndex + 1} • {interviewQuestion.category}
                   </p>
                   <h2>{interviewQuestion.question}</h2>
@@ -915,7 +940,7 @@ function App() {
             <section className="card question-card" aria-live="polite">
               {quizQuestion ? (
                 <>
-                  <p className="card__meta">
+                  <p className="card__meta" data-question-id={quizQuestion.id}>
                     Quiz • Q{quizQuestion.id} • {quizQuestion.category}
                   </p>
                   <h2>{quizQuestion.question}</h2>

@@ -1,5 +1,11 @@
 import { expect, test } from '@playwright/test'
 
+function extractQuestionId(rawId: string | null) {
+  if (!rawId) return null
+  const id = Number(rawId)
+  return Number.isFinite(id) ? id : null
+}
+
 test('flashcards mode supports reveal/rate and guide toggle', async ({ page }) => {
   await page.goto('/')
 
@@ -35,10 +41,58 @@ test('settings warning appears when required fields are missing and clears once 
   await page.getByLabel('Governor', { exact: true }).fill('Gavin Newsom')
   await page.getByLabel('Senator 1', { exact: true }).fill('Alex Padilla')
   await page.getByLabel('Senator 2', { exact: true }).fill('Laphonza Butler')
-  await page.getByLabel('Representative', { exact: true }).fill('Nancy Pelosi')
+  await page.getByLabel(/Representative/).first().fill('Nancy Pelosi')
 
   await page.getByRole('button', { name: 'Flashcards' }).click()
   await expect(page.getByText('Before you start, complete required Settings fields:')).toHaveCount(0)
+})
+
+test('flashcard shuffled sequence covers all cards and counting is accurate', async ({ page }, testInfo) => {
+  test.setTimeout(120_000)
+  if (testInfo.project.name !== 'chromium') test.skip()
+
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Flashcards' }).click()
+  await page.getByRole('button', { name: 'All (100)' }).click()
+  await page.getByRole('button', { name: 'Reset progress' }).click()
+  await page.getByRole('button', { name: 'Shuffle deck' }).click()
+
+  const seenIds = new Set<number>()
+
+  for (let i = 0; i < 100; i += 1) {
+    const meta = page.locator('.question-card [data-question-id]').first()
+    await expect(meta).toBeVisible()
+    const qid = extractQuestionId(await meta.getAttribute('data-question-id'))
+    expect(qid).not.toBeNull()
+    seenIds.add(qid as number)
+
+    const markingActions = page.locator('section.study-actions').nth(1)
+
+    if (i < 40) {
+      await markingActions.getByRole('button', { name: 'I knew this (1)' }).click()
+    } else {
+      await markingActions.getByRole('button', { name: 'Needs review (2)' }).click()
+    }
+  }
+
+  expect(seenIds.size).toBe(100)
+
+  const knownStat = page
+    .locator('section[aria-label="practice stats"] div')
+    .filter({ hasText: 'Known' })
+    .locator('strong')
+  const reviewStat = page
+    .locator('section[aria-label="practice stats"] div')
+    .filter({ hasText: 'Needs review' })
+    .locator('strong')
+  const progressStat = page
+    .locator('section[aria-label="practice stats"] div')
+    .filter({ hasText: 'Progress' })
+    .locator('strong')
+
+  await expect(knownStat).toHaveText('40')
+  await expect(reviewStat).toHaveText('60')
+  await expect(progressStat).toHaveText('100%')
 })
 
 test('quiz mode allows answering and moving to next question', async ({ page }) => {
