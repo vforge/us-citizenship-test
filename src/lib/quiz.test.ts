@@ -7,15 +7,8 @@ import {
   getDynamicAnswers,
   mergeAcceptedAnswers,
   pickUniqueQuestionIds,
+  requiresProfileAnswer,
 } from './quiz'
-
-const QUESTIONS: CivicsQuestion[] = [
-  { id: 1, category: 'American Government', question: 'Q1', answers: ['A1'] },
-  { id: 2, category: 'American Government', question: 'Q2', answers: ['A2'] },
-  { id: 3, category: 'American Government', question: 'Q3', answers: ['A3'] },
-  { id: 4, category: 'American Government', question: 'Q4', answers: ['A4'] },
-  { id: 5, category: 'American Government', question: 'Q5', answers: ['A5'] },
-]
 
 describe('quiz helpers', () => {
   it('returns unique ids up to requested count', () => {
@@ -24,11 +17,19 @@ describe('quiz helpers', () => {
     expect(new Set(ids).size).toBe(3)
   })
 
-  it('builds options including the correct answer', () => {
-    const result = buildMultipleChoiceOptions(QUESTIONS[0], QUESTIONS, 5)
-    expect(result.options.length).toBe(5)
+  it('builds options from dedicated distractors only', () => {
+    const question = ALL_QUESTIONS.find((q) => q.id === 39)
+    expect(question).toBeTruthy()
+
+    const result = buildMultipleChoiceOptions(question!, 5)
+    const dedicated = new Set(getQuestionDistractors(question!))
+
     expect(result.options).toContain(result.correct)
-    expect(result.correct).toBe('A1')
+    expect(result.correct).toBe('Nine (9)')
+
+    for (const option of result.options) {
+      expect(option === result.correct || dedicated.has(option)).toBe(true)
+    }
   })
 
   it('returns dedicated distractors from separate bank', () => {
@@ -53,6 +54,28 @@ describe('quiz helpers', () => {
         expect(distractors).not.toContain(accepted)
       }
     }
+  })
+
+  it('supports dynamic accepted answers when building options', () => {
+    const question: CivicsQuestion = {
+      id: 44,
+      category: 'American Government',
+      question: 'What is the capital of your state?',
+      answers: ['Varies by state'],
+    }
+
+    const result = buildMultipleChoiceOptions(question, 5, ['Sacramento', 'Varies by state'])
+
+    expect(result.correct).toBe('Sacramento')
+    expect(result.options).toContain('Sacramento')
+    expect(result.options).not.toContain('Varies by state')
+  })
+
+  it('marks profile-driven questions as requiring profile answers', () => {
+    expect(requiresProfileAnswer(20)).toBe(true)
+    expect(requiresProfileAnswer(23)).toBe(true)
+    expect(requiresProfileAnswer(47)).toBe(true)
+    expect(requiresProfileAnswer(39)).toBe(false)
   })
 
   it('uses dynamic answers for state/profile questions', () => {
