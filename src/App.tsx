@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { QUESTIONS } from './data/questions'
-import { FEDERAL_OFFICIAL_DEFAULTS } from './data/federal-officials'
 import { STATE_OFFICIALS_BY_ABBR } from './data/state-officials'
 import type { UserProfile } from './lib/quiz'
 import {
@@ -29,6 +28,18 @@ const GUIDE_OPEN_KEY = 'us-citizenship-test.guide-open.v1'
 const MODE_KEY = 'us-citizenship-test.mode.v1'
 const INTERVIEW_QUESTION_COUNT = 10
 const INTERVIEW_PASS_MARK = 6
+const DEBUG_GUIDE = import.meta.env.DEV
+
+function sanitizeProfile(profile?: Partial<UserProfile> | null): UserProfile {
+  return {
+    state: profile?.state,
+    stateCapital: profile?.stateCapital,
+    governor: profile?.governor,
+    senator1: profile?.senator1,
+    senator2: profile?.senator2,
+    representative: profile?.representative,
+  }
+}
 
 function getRandomQuestionId() {
   const randomIndex = Math.floor(Math.random() * QUESTIONS.length)
@@ -45,9 +56,44 @@ function shuffleIds(ids: number[]) {
 }
 
 function App() {
-  const [mode, setMode] = useState<Mode>('practice')
+  const [mode, setMode] = useState<Mode>(() => {
+    try {
+      const rawMode = localStorage.getItem(MODE_KEY)
+      if (
+        rawMode === 'practice' ||
+        rawMode === 'interview' ||
+        rawMode === 'quiz' ||
+        rawMode === 'drill' ||
+        rawMode === 'settings'
+      ) {
+        return rawMode
+      }
+    } catch {
+      // ignore invalid storage
+    }
+
+    return 'practice'
+  })
   const [filter, setFilter] = useState<Filter>('all')
-  const [isGuideOpen, setIsGuideOpen] = useState(true)
+  const [isGuideOpen, setIsGuideOpen] = useState(() => {
+    try {
+      const rawGuideOpen = localStorage.getItem(GUIDE_OPEN_KEY)
+      const next = rawGuideOpen !== null ? rawGuideOpen === 'true' : true
+      if (DEBUG_GUIDE) {
+        console.log('[guide] init', {
+          href: window.location.href,
+          rawGuideOpen,
+          resolved: next,
+        })
+      }
+      return next
+    } catch (error) {
+      if (DEBUG_GUIDE) {
+        console.log('[guide] init error', error)
+      }
+      return true
+    }
+  })
   const [isAnswerVisible, setIsAnswerVisible] = useState(false)
   const [announcement, setAnnouncement] = useState('')
   const [zipCode, setZipCode] = useState('')
@@ -62,7 +108,14 @@ function App() {
     shuffleIds(QUESTIONS.map((q) => q.id)),
   )
   const [practiceDeckCursor, setPracticeDeckCursor] = useState(0)
-  const [profile, setProfile] = useState<UserProfile>({})
+  const [profile, setProfile] = useState<UserProfile>(() => {
+    try {
+      const rawProfile = localStorage.getItem(PROFILE_KEY)
+      return rawProfile ? sanitizeProfile(JSON.parse(rawProfile) as UserProfile) : {}
+    } catch {
+      return {}
+    }
+  })
   const [missedQuestionIds, setMissedQuestionIds] = useState<number[]>([])
 
   const [interviewQuestionIds, setInterviewQuestionIds] = useState<number[]>([])
@@ -80,6 +133,32 @@ function App() {
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
 
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+
+  const updateGuideOpen = useCallback((next: boolean) => {
+    if (DEBUG_GUIDE) {
+      console.log('[guide] updateGuideOpen:start', {
+        next,
+        beforeState: isGuideOpen,
+        beforeStorage: localStorage.getItem(GUIDE_OPEN_KEY),
+      })
+    }
+
+    setIsGuideOpen(next)
+
+    try {
+      localStorage.setItem(GUIDE_OPEN_KEY, String(next))
+      if (DEBUG_GUIDE) {
+        console.log('[guide] updateGuideOpen:stored', {
+          next,
+          afterStorage: localStorage.getItem(GUIDE_OPEN_KEY),
+        })
+      }
+    } catch (error) {
+      if (DEBUG_GUIDE) {
+        console.log('[guide] updateGuideOpen:error', error)
+      }
+    }
+  }, [isGuideOpen])
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -101,32 +180,12 @@ function App() {
         setRatings(sanitized)
       }
 
-      const rawProfile = localStorage.getItem(PROFILE_KEY)
-      if (rawProfile) {
-        setProfile(JSON.parse(rawProfile) as UserProfile)
-      }
-
       const rawMissed = localStorage.getItem(MISSED_KEY)
       if (rawMissed) {
         const parsed = JSON.parse(rawMissed) as number[]
         setMissedQuestionIds(parsed.filter((n) => Number.isInteger(n)))
       }
 
-      const rawGuideOpen = localStorage.getItem(GUIDE_OPEN_KEY)
-      if (rawGuideOpen !== null) {
-        setIsGuideOpen(rawGuideOpen === 'true')
-      }
-
-      const rawMode = localStorage.getItem(MODE_KEY)
-      if (
-        rawMode === 'practice' ||
-        rawMode === 'interview' ||
-        rawMode === 'quiz' ||
-        rawMode === 'drill' ||
-        rawMode === 'settings'
-      ) {
-        setMode(rawMode)
-      }
     } catch {
       // ignore invalid storage
     }
@@ -146,11 +205,43 @@ function App() {
 
   useEffect(() => {
     localStorage.setItem(GUIDE_OPEN_KEY, String(isGuideOpen))
+    if (DEBUG_GUIDE) {
+      console.log('[guide] effect persist', {
+        state: isGuideOpen,
+        storage: localStorage.getItem(GUIDE_OPEN_KEY),
+      })
+    }
   }, [isGuideOpen])
 
   useEffect(() => {
     localStorage.setItem(MODE_KEY, mode)
   }, [mode])
+
+  useEffect(() => {
+    if (!DEBUG_GUIDE) return
+
+    console.log('[guide] render/state changed', {
+      isGuideOpen,
+      storage: localStorage.getItem(GUIDE_OPEN_KEY),
+      href: window.location.href,
+    })
+  }, [isGuideOpen])
+
+  useEffect(() => {
+    if (!DEBUG_GUIDE) return
+
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== GUIDE_OPEN_KEY) return
+      console.log('[guide] storage event', {
+        oldValue: event.oldValue,
+        newValue: event.newValue,
+        href: window.location.href,
+      })
+    }
+
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [])
 
   const filteredQuestions = useMemo(() => {
     if (filter === 'all') return QUESTIONS
@@ -276,24 +367,10 @@ function App() {
           return Boolean(profile.senator1?.trim() || profile.senator2?.trim())
         case 23:
           return Boolean(profile.representative?.trim())
-        case 28:
-          return Boolean(
-            profile.president?.trim() &&
-              profile.president.trim() !== FEDERAL_OFFICIAL_DEFAULTS.president,
-          )
-        case 29:
-          return Boolean(
-            profile.vicePresident?.trim() &&
-              profile.vicePresident.trim() !== FEDERAL_OFFICIAL_DEFAULTS.vicePresident,
-          )
         case 43:
           return Boolean(profile.governor?.trim())
         case 44:
           return Boolean(profile.stateCapital?.trim())
-        case 47:
-          return Boolean(
-            profile.speaker?.trim() && profile.speaker.trim() !== FEDERAL_OFFICIAL_DEFAULTS.speaker,
-          )
         default:
           return true
       }
@@ -433,7 +510,7 @@ function App() {
     const text = await file.text()
     const parsed = JSON.parse(text) as AppBackup
     if (parsed.ratings) setRatings(parsed.ratings)
-    if (parsed.profile) setProfile(parsed.profile)
+    if (parsed.profile) setProfile(sanitizeProfile(parsed.profile))
     if (parsed.missedQuestionIds) setMissedQuestionIds(parsed.missedQuestionIds)
   }
 
@@ -496,17 +573,40 @@ function App() {
     announce('Flashcard deck shuffled.')
   }
 
-  const applyFederalDefaults = () => {
+  const stateOptions = useMemo(
+    () =>
+      Object.entries(STATE_OFFICIALS_BY_ABBR)
+        .map(([abbr, info]) => ({ abbr, name: info.state }))
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    [],
+  )
+
+  const selectedStateAbbr = useMemo(() => {
+    const normalizedState = profile.state?.trim().toLowerCase()
+    if (!normalizedState) return ''
+
+    const match = stateOptions.find(
+      ({ abbr, name }) =>
+        abbr.toLowerCase() === normalizedState || name.trim().toLowerCase() === normalizedState,
+    )
+
+    return match?.abbr ?? ''
+  }, [profile.state, stateOptions])
+
+  const handleStateSelect = (stateAbbr: string) => {
+    const stateInfo = STATE_OFFICIALS_BY_ABBR[stateAbbr]
+    if (!stateInfo) return
+
     setProfile((prev) => ({
       ...prev,
-      president: prev.president?.trim() ? prev.president : FEDERAL_OFFICIAL_DEFAULTS.president,
-      vicePresident: prev.vicePresident?.trim()
-        ? prev.vicePresident
-        : FEDERAL_OFFICIAL_DEFAULTS.vicePresident,
-      speaker: prev.speaker?.trim() ? prev.speaker : FEDERAL_OFFICIAL_DEFAULTS.speaker,
+      state: stateInfo.state,
+      stateCapital: stateInfo.stateCapital,
+      governor: stateInfo.governor,
+      senator1: stateInfo.senators[0],
+      senator2: stateInfo.senators[1],
     }))
 
-    const message = `Filled federal offices (updated ${FEDERAL_OFFICIAL_DEFAULTS.updatedAt}).`
+    const message = `Auto-filled profile for ${stateInfo.state}.`
     setZipLookupStatus(message)
     announce(message)
   }
@@ -551,16 +651,11 @@ function App() {
         governor: stateInfo?.governor ?? prev.governor ?? '',
         senator1: stateInfo?.senators?.[0] ?? prev.senator1 ?? '',
         senator2: stateInfo?.senators?.[1] ?? prev.senator2 ?? '',
-        president: prev.president?.trim() ? prev.president : FEDERAL_OFFICIAL_DEFAULTS.president,
-        vicePresident: prev.vicePresident?.trim()
-          ? prev.vicePresident
-          : FEDERAL_OFFICIAL_DEFAULTS.vicePresident,
-        speaker: prev.speaker?.trim() ? prev.speaker : FEDERAL_OFFICIAL_DEFAULTS.speaker,
       }))
 
       const message = stateInfo
-        ? `Auto-filled profile for ${stateInfo.state} and federal offices.`
-        : `Found ${stateName}; filled federal offices, but no local state profile is available.`
+        ? `Auto-filled profile for ${stateInfo.state}.`
+        : `Found ${stateName}, but no local state profile is available.`
 
       setZipLookupStatus(message)
       announce(message)
@@ -586,6 +681,7 @@ function App() {
     const value = profile[key]
     return !value || value.trim().length === 0
   })
+  const hasMissingRequiredSettings = missingRequiredSettings.length > 0
 
   const modeGuide: Record<Mode, { title: string; detail: string }> = {
     practice: {
@@ -633,24 +729,36 @@ function App() {
           ['quiz', 'Quiz'],
           ['drill', `Drill (${missedQuestionIds.length})`],
           ['settings', 'Settings'],
-        ].map(([value, label]) => (
-          <button
-            key={value}
-            type="button"
-            className={mode === value ? 'is-active ghost' : 'ghost'}
-            aria-pressed={mode === value}
-            onClick={() => {
-              setMode(value as Mode)
-              announce(`Switched to ${label} mode.`)
-              if (value === 'interview' && interviewQuestionIds.length === 0) startInterview()
-            }}
-          >
-            {label}
-          </button>
-        ))}
+        ].map(([value, label]) => {
+          const isSettingsButton = value === 'settings'
+          const accessibleLabel =
+            isSettingsButton && hasMissingRequiredSettings ? `${label} (required fields missing)` : label
+
+          return (
+            <button
+              key={value}
+              type="button"
+              className={mode === value ? 'is-active ghost' : 'ghost'}
+              aria-pressed={mode === value}
+              aria-label={accessibleLabel}
+              onClick={() => {
+                setMode(value as Mode)
+                announce(`Switched to ${label} mode.`)
+                if (value === 'interview' && interviewQuestionIds.length === 0) startInterview()
+              }}
+            >
+              <span>{label}</span>
+              {isSettingsButton && hasMissingRequiredSettings && (
+                <span className="warning-badge" aria-hidden="true" title="Required fields missing">
+                  ⚠️
+                </span>
+              )}
+            </button>
+          )
+        })}
 
         {!isGuideOpen && (
-          <button type="button" className="ghost" onClick={() => setIsGuideOpen(true)}>
+          <button type="button" className="ghost" onClick={() => updateGuideOpen(true)}>
             Show guide
           </button>
         )}
@@ -670,7 +778,7 @@ function App() {
                 className="ghost icon-button"
                 aria-label="Hide guide"
                 title="Hide guide"
-                onClick={() => setIsGuideOpen(false)}
+                onClick={() => updateGuideOpen(false)}
               >
                 ×
               </button>
@@ -678,7 +786,7 @@ function App() {
             <h2>{modeGuide[mode].title}</h2>
             <p>{modeGuide[mode].detail}</p>
 
-            {missingRequiredSettings.length > 0 && (
+            {hasMissingRequiredSettings && (
               <div className="guide-warning" role="status" aria-live="polite">
                 <p>
                   Before you start, complete required Settings fields:{' '}
@@ -1052,31 +1160,43 @@ function App() {
               <h2>Your reference profile</h2>
 
               <div className="zip-lookup" role="group" aria-label="ZIP code auto-fill">
+                <label htmlFor="state-select">
+                  <span>State</span>
+                  <select
+                    id="state-select"
+                    value={selectedStateAbbr}
+                    onChange={(event) => handleStateSelect(event.target.value)}
+                  >
+                    <option value="">Select a state</option>
+                    {stateOptions.map((option) => (
+                      <option key={option.abbr} value={option.abbr}>
+                        {option.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <label htmlFor="zip-input">
                   <span>ZIP code</span>
-                  <input
-                    id="zip-input"
-                    inputMode="numeric"
-                    pattern="[0-9]{5}"
-                    maxLength={5}
-                    placeholder="e.g. 94110"
-                    value={zipCode}
-                    onChange={(event) => setZipCode(event.target.value.replace(/\D/g, '').slice(0, 5))}
-                  />
+                  <div className="zip-input-row">
+                    <input
+                      id="zip-input"
+                      inputMode="numeric"
+                      pattern="[0-9]{5}"
+                      maxLength={5}
+                      placeholder="e.g. 94110"
+                      value={zipCode}
+                      onChange={(event) => setZipCode(event.target.value.replace(/\D/g, '').slice(0, 5))}
+                    />
+                    <button
+                      type="button"
+                      className="ghost"
+                      onClick={handleZipLookup}
+                      disabled={isZipLookupLoading}
+                    >
+                      {isZipLookupLoading ? 'Loading…' : 'Auto-fill from ZIP'}
+                    </button>
+                  </div>
                 </label>
-                <div className="zip-actions">
-                  <button
-                    type="button"
-                    className="ghost"
-                    onClick={handleZipLookup}
-                    disabled={isZipLookupLoading}
-                  >
-                    {isZipLookupLoading ? 'Loading…' : 'Auto-fill from ZIP'}
-                  </button>
-                  <button type="button" className="ghost" onClick={applyFederalDefaults}>
-                    Fill federal offices
-                  </button>
-                </div>
                 {zipLookupStatus && (
                   <p className="zip-status" aria-live="polite">
                     {zipLookupStatus}
@@ -1092,12 +1212,24 @@ function App() {
                   ['senator1', 'Senator 1'],
                   ['senator2', 'Senator 2'],
                   ['representative', 'Representative'],
-                  ['president', 'President'],
-                  ['vicePresident', 'Vice President'],
-                  ['speaker', 'Speaker of the House'],
                 ].map(([key, label]) => (
                   <label key={key}>
-                    <span>{label}</span>
+                    <span className="field-label-row">
+                      <span>{label}</span>
+                      {key === 'representative' && (
+                        <small className="field-help field-help--inline">
+                          Find your representative at{' '}
+                          <a
+                            href="https://www.house.gov/representatives/find-your-representative"
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            house.gov
+                          </a>
+                          .
+                        </small>
+                      )}
+                    </span>
                     <input
                       value={(profile[key as keyof UserProfile] as string) ?? ''}
                       onChange={(event) =>
@@ -1107,19 +1239,6 @@ function App() {
                         }))
                       }
                     />
-                    {key === 'representative' && (
-                      <small className="field-help">
-                        Find your representative at{' '}
-                        <a
-                          href="https://www.house.gov/representatives/find-your-representative"
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          house.gov
-                        </a>
-                        .
-                      </small>
-                    )}
                   </label>
                 ))}
               </div>

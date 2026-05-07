@@ -15,6 +15,10 @@ test('flashcards mode supports reveal/rate and guide toggle', async ({ page }) =
   await page.getByRole('button', { name: 'Hide guide' }).click()
   await expect(page.getByRole('button', { name: 'Show guide' })).toBeVisible()
 
+  await page.reload()
+  await expect(page.getByRole('button', { name: 'Show guide' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Hide guide' })).toHaveCount(0)
+
   await page.getByRole('button', { name: 'Show guide' }).click()
   await expect(page.getByRole('heading', { name: 'Flashcard practice' })).toBeVisible()
 
@@ -30,18 +34,18 @@ test('flashcards mode supports reveal/rate and guide toggle', async ({ page }) =
   await expect(knownStat).toHaveText('1')
 })
 
-test('settings warning appears when required fields are missing and clears once filled', async ({ page }) => {
+test('settings warning badge appears when required fields are missing and clears once filled', async ({ page }) => {
   await page.goto('/')
 
+  await expect(page.getByRole('button', { name: 'Settings (required fields missing)' })).toBeVisible()
   await expect(page.getByText('Before you start, complete required Settings fields:')).toBeVisible()
-  await page.getByRole('button', { name: 'Go to Settings' }).click()
 
-  await page.getByLabel('State', { exact: true }).fill('California')
-  await page.getByLabel('State capital', { exact: true }).fill('Sacramento')
-  await page.getByLabel('Governor', { exact: true }).fill('Gavin Newsom')
-  await page.getByLabel('Senator 1', { exact: true }).fill('Alex Padilla')
-  await page.getByLabel('Senator 2', { exact: true }).fill('Laphonza Butler')
+  await page.getByRole('button', { name: 'Go to Settings' }).click()
+  await page.locator('#state-select').selectOption('CA')
   await page.getByLabel(/Representative/).first().fill('Nancy Pelosi')
+
+  await expect(page.getByRole('button', { name: 'Settings (required fields missing)' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Settings' })).toBeVisible()
 
   await page.getByRole('button', { name: 'Flashcards' }).click()
   await expect(page.getByText('Before you start, complete required Settings fields:')).toHaveCount(0)

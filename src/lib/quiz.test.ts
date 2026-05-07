@@ -74,13 +74,20 @@ describe('quiz helpers', () => {
   it('marks profile-driven questions as requiring profile answers', () => {
     expect(requiresProfileAnswer(20)).toBe(true)
     expect(requiresProfileAnswer(23)).toBe(true)
-    expect(requiresProfileAnswer(47)).toBe(true)
+    expect(requiresProfileAnswer(47)).toBe(false)
     expect(requiresProfileAnswer(39)).toBe(false)
   })
 
   it('uses dynamic answers for state/profile questions', () => {
     const dynamic = getDynamicAnswers(43, { governor: 'Jane Doe' })
     expect(dynamic).toEqual(['Jane Doe'])
+  })
+
+  it('does not use dynamic answers for federal officeholder questions', () => {
+    expect(getDynamicAnswers(28, {})).toEqual([])
+    expect(getDynamicAnswers(29, {})).toEqual([])
+    expect(getDynamicAnswers(40, {})).toEqual([])
+    expect(getDynamicAnswers(47, {})).toEqual([])
   })
 
   it('merges static and dynamic answers without duplicates', () => {

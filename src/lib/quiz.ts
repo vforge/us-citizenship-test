@@ -8,9 +8,6 @@ export type UserProfile = {
   senator1?: string
   senator2?: string
   representative?: string
-  president?: string
-  vicePresident?: string
-  speaker?: string
 }
 
 export function pickRandomQuestionId(ids: number[], currentId?: number) {
@@ -51,7 +48,7 @@ export function buildMultipleChoiceOptions(
   }
 }
 
-export const DYNAMIC_PROFILE_QUESTION_IDS = [20, 23, 28, 29, 43, 44, 47] as const
+export const DYNAMIC_PROFILE_QUESTION_IDS = [20, 23, 43, 44] as const
 
 export function requiresProfileAnswer(questionId: number) {
   return DYNAMIC_PROFILE_QUESTION_IDS.includes(
@@ -65,16 +62,10 @@ export function getDynamicAnswers(questionId: number, profile: UserProfile) {
       return [profile.senator1, profile.senator2].filter(Boolean) as string[]
     case 23:
       return profile.representative ? [profile.representative] : []
-    case 28:
-      return profile.president ? [profile.president] : []
-    case 29:
-      return profile.vicePresident ? [profile.vicePresident] : []
     case 43:
       return profile.governor ? [profile.governor] : []
     case 44:
       return profile.stateCapital ? [profile.stateCapital] : []
-    case 47:
-      return profile.speaker ? [profile.speaker] : []
     default:
       return []
   }

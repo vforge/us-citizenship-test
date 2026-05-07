@@ -66,6 +66,14 @@
 
 .mode-switch button {
   flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.warning-badge {
+  font-size: 0.9em;
+  line-height: 1;
 }
 
 .stats {
@@ -359,6 +367,7 @@ button.danger {
 
 .zip-lookup {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.55rem;
   margin-bottom: 0.85rem;
   padding: 0.65rem;
@@ -372,23 +381,40 @@ button.danger {
   gap: 0.25rem;
 }
 
-.zip-lookup input {
+.zip-lookup input,
+.zip-lookup select {
+  width: 100%;
+  min-height: 42px;
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 0.5rem;
   background: var(--panel);
   color: var(--text);
-  max-width: 220px;
 }
 
-.zip-actions {
+.zip-input-row {
   display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+  gap: 0;
+  align-items: stretch;
 }
 
-.zip-actions button {
+.zip-input-row input {
+  flex: 1;
+  min-width: 0;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.zip-input-row button {
   width: fit-content;
+  min-height: 42px;
+  white-space: nowrap;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.zip-status {
+  grid-column: 1 / -1;
 }
 
 .zip-status {
@@ -407,9 +433,20 @@ button.danger {
   gap: 0.3rem;
 }
 
+.field-label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
 .field-help {
   font-size: 0.76rem;
   opacity: 0.8;
+}
+
+.field-help--inline {
+  text-align: right;
 }
 
 .field-help a {
@@ -459,8 +496,19 @@ button.danger {
   }
 
   .category-grid,
-  .profile-grid {
+  .profile-grid,
+  .zip-lookup {
     grid-template-columns: 1fr;
+  }
+
+  .zip-input-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .field-label-row {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .category-card {
