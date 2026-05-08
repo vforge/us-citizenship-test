@@ -15,9 +15,9 @@ const isLocalhost =
 if ('serviceWorker' in navigator) {
   if (import.meta.env.DEV || isLocalhost) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.getRegistrations().then((registrations) => {
+      void navigator.serviceWorker.getRegistrations().then((registrations) => {
         registrations.forEach((registration) => {
-          registration.unregister().catch(() => {
+          void registration.unregister().catch(() => {
             // ignore unregister failure
           })
         })
@@ -25,7 +25,7 @@ if ('serviceWorker' in navigator) {
     })
   } else if (import.meta.env.PROD) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js').catch(() => {
+      void navigator.serviceWorker.register('/sw.js').catch(() => {
         // ignore registration failure
       })
     })

@@ -253,14 +253,7 @@ function App() {
     setPracticeDeckIds(shuffleIds(filteredQuestions.map((q) => q.id)))
     setPracticeDeckCursor(0)
     setIsAnswerVisible(false)
-  }, [filter])
-
-  useEffect(() => {
-    if (filter === 'all') return
-    setPracticeDeckIds(shuffleIds(filteredQuestions.map((q) => q.id)))
-    setPracticeDeckCursor(0)
-    setIsAnswerVisible(false)
-  }, [filter, ratings, filteredQuestions])
+  }, [filter, filteredQuestions])
 
   const currentQuestion =
     filteredQuestions.find((q) => q.id === practiceDeckIds[practiceDeckCursor]) ?? null
@@ -464,12 +457,12 @@ function App() {
     setIsAnswerVisible(false)
   }
 
-  const goToNextDrill = () => {
+  const goToNextDrill = useCallback(() => {
     const ids = drillQuestions.map((q) => q.id)
     const nextId = pickRandomQuestionId(ids, drillQuestion?.id)
     setCurrentQuestionId(nextId)
     setIsAnswerVisible(false)
-  }
+  }, [drillQuestion?.id, drillQuestions])
 
   const clearMissed = () => {
     setMissedQuestionIds([])
@@ -539,7 +532,11 @@ function App() {
           })
         }
         if (event.key === 'n') {
-          ;(mode === 'drill' ? goToNextDrill : goToNext)()
+          if (mode === 'drill') {
+            goToNextDrill()
+          } else {
+            goToNext()
+          }
           announce('Moved to next question.')
         }
         if (event.key === '1') rateCurrentQuestion('known')
@@ -562,7 +559,11 @@ function App() {
   }
 
   const handleNextQuestion = () => {
-    mode === 'drill' ? goToNextDrill() : goToNext()
+    if (mode === 'drill') {
+      goToNextDrill()
+    } else {
+      goToNext()
+    }
     announce('Moved to next question.')
   }
 
@@ -987,14 +988,25 @@ function App() {
               >
                 Known
               </button>
-              <button
-                type="button"
-                className="warn"
-                onClick={() => rateCurrentQuestion('review')}
-                disabled={!currentDisplayQuestion}
-              >
-                Review
-              </button>
+              {mode === 'drill' ? (
+                <button
+                  type="button"
+                  className="ghost danger"
+                  aria-label="Clear missed list"
+                  onClick={clearMissed}
+                >
+                  Clear
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="warn"
+                  onClick={() => rateCurrentQuestion('review')}
+                  disabled={!currentDisplayQuestion}
+                >
+                  Review
+                </button>
+              )}
             </section>
           </>
         )}
