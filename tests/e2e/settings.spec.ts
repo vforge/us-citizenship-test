@@ -61,7 +61,7 @@ test('settings auto-fill, export, and import cover profile and progress data', a
   const profileForm = page.locator('.profile-grid')
 
   // Verify the ZIP lookup populated the local profile fields with the expected values.
-  await expect(page.getByText(`Auto-filled profile for ${california.state}.`)).toBeVisible()
+  await expect(page.locator('.zip-status')).toHaveText(`Auto-filled profile for ${california.state}.`)
   await expect(profileForm.getByRole('textbox', { name: 'State', exact: true })).toHaveValue(
     california.state,
   )
