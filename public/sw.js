@@ -29,7 +29,7 @@ self.addEventListener('fetch', (event) => {
           }
 
           const copy = response.clone()
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy))
+          void caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy))
           return response
         })
         .catch(() => caches.match('/index.html'))

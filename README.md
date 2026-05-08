@@ -56,21 +56,34 @@ pnpm build
 
 ### 4) Run tests
 
+Lint:
+
+```bash
+pnpm lint
+```
+
 Unit tests:
 
 ```bash
 pnpm test
 ```
 
-End-to-end tests (Playwright, headless):
+End-to-end tests (Playwright, full suite, headless):
 
 ```bash
-pnpm test:e2e
+pnpm e2e
 ```
 
 End-to-end tests (headed):
 
 ```bash
+pnpm e2e:headed
+```
+
+Legacy aliases still work:
+
+```bash
+pnpm test:e2e
 pnpm test:e2e:headed
 ```
 
@@ -152,6 +165,7 @@ Tips for a good icon:
 
 - React 19
 - TypeScript
+- Oxlint
 - Vite
 - Vitest
 - pnpm
